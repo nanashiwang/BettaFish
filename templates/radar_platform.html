@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A 股舆情雷达 · 平台中心</title>
+    <style>
+        :root {
+            --bg: #f5f7fa;
+            --panel: #ffffff;
+            --ink: #101828;
+            --muted: #667085;
+            --line: #dce3ea;
+            --brand: #176b87;
+            --brand-2: #1f8a70;
+            --blue: #2563eb;
+            --ok: #067647;
+            --warn: #b54708;
+            --danger: #b42318;
+            --shadow: 0 18px 48px rgba(16, 24, 40, .10);
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: linear-gradient(180deg, rgba(23, 107, 135, .07), transparent 240px), var(--bg);
+            color: var(--ink);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        button, input, select, textarea { font: inherit; }
+        a { color: inherit; text-decoration: none; }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            height: 72px;
+            padding: 0 28px;
+            background: rgba(255, 255, 255, .9);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(16px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+        }
+        .brand { display: flex; align-items: center; gap: 12px; min-width: 260px; }
+        .logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 11px;
+            background: linear-gradient(135deg, var(--brand), var(--brand-2));
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-weight: 900;
+            box-shadow: 0 10px 24px rgba(23, 107, 135, .24);
+        }
+        .brand-title { font-size: 18px; font-weight: 900; }
+        .brand-sub { margin-top: 3px; color: var(--muted); font-size: 12px; }
+        .nav { display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--line); background: #fff; border-radius: 12px; }
+        .nav button, .nav a {
+            border: 0;
+            background: transparent;
+            padding: 9px 14px;
+            border-radius: 9px;
+            color: var(--muted);
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .nav .active { color: #fff; background: var(--brand); box-shadow: 0 8px 18px rgba(23, 107, 135, .20); }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            height: 30px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: #eef7f4;
+            color: var(--ok);
+            border: 1px solid #caeadc;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        main { width: min(1420px, calc(100vw - 44px)); margin: 24px auto 42px; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+        }
+        .flat { background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; }
+        .grid { display: grid; gap: 18px; }
+        .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .split { display: grid; grid-template-columns: 460px 1fr; gap: 22px; }
+        h1, h2, h3, p { margin: 0; }
+        h1 { font-size: 34px; line-height: 1.18; }
+        h2 { font-size: 22px; }
+        h3 { font-size: 16px; }
+        .body { color: var(--muted); font-size: 14px; line-height: 1.7; }
+        .small { color: var(--muted); font-size: 12px; }
+        .section-title { display: flex; align-items: end; justify-content: space-between; margin: 4px 0 14px; }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--brand);
+            background: #ecf8fb;
+            border: 1px solid #ccecf3;
+        }
+        .pill.ok { color: var(--ok); background: #ecfdf3; border-color: #bbf7d0; }
+        .pill.warn { color: var(--warn); background: #fff7ed; border-color: #fed7aa; }
+        .pill.danger { color: var(--danger); background: #fff1f0; border-color: #ffccc7; }
+        .pill.gray { color: var(--muted); background: #f2f4f7; border-color: #e4e7ec; }
+        .pill.blue { color: var(--blue); background: #eff6ff; border-color: #bfdbfe; }
+        .btn {
+            height: 42px;
+            padding: 0 16px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            font-weight: 850;
+            cursor: pointer;
+        }
+        .btn.primary { border-color: var(--brand); background: var(--brand); color: #fff; }
+        .btn.full { width: 100%; }
+        input, select, textarea {
+            width: 100%;
+            height: 44px;
+            border: 1px solid #cfd8e3;
+            border-radius: 10px;
+            background: #fff;
+            padding: 0 12px;
+            outline: none;
+        }
+        textarea { height: 86px; padding-top: 12px; resize: none; }
+        label { color: var(--muted); font-size: 13px; font-weight: 800; }
+        .form-row { display: grid; gap: 8px; margin-bottom: 14px; }
+        .checkbox {
+            display: grid;
+            grid-template-columns: 18px 1fr;
+            gap: 10px;
+            align-items: start;
+            padding: 12px;
+            border-radius: 12px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #7c2d12;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+        .checkbox input { width: 18px; height: 18px; margin: 2px 0 0; }
+        .login-panel { padding: 28px; min-height: 690px; }
+        .preview { position: relative; padding: 22px; min-height: 690px; overflow: hidden; }
+        .preview::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,.86));
+            backdrop-filter: blur(3px);
+        }
+        .lock-box {
+            position: absolute;
+            z-index: 2;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 320px;
+            padding: 22px;
+            text-align: center;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+        }
+        .mini-card { padding: 14px; margin-top: 12px; }
+        .plan { padding: 20px; min-height: 490px; display: flex; flex-direction: column; gap: 14px; }
+        .plan.recommended { border-color: #74c7c7; box-shadow: 0 18px 48px rgba(23, 107, 135, .16); }
+        .price { font-size: 34px; font-weight: 950; }
+        .price small { color: var(--muted); font-size: 13px; }
+        .features { display: grid; gap: 10px; margin-top: 4px; }
+        .feature { display: grid; grid-template-columns: 18px 1fr; gap: 8px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+        .meter { height: 8px; background: #e8eef5; border-radius: 999px; overflow: hidden; margin-top: 9px; }
+        .meter span { display: block; height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); border-radius: inherit; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border-bottom: 1px solid #edf1f5; text-align: left; padding: 13px 12px; vertical-align: middle; }
+        th { color: var(--muted); background: #f8fafc; font-size: 12px; font-weight: 900; }
+        .account-layout { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; }
+        .admin-shell { display: grid; grid-template-columns: 230px 1fr; gap: 22px; }
+        .sidebar { padding: 18px; min-height: 850px; }
+        .side-nav { display: grid; gap: 6px; margin-top: 20px; }
+        .side-nav button {
+            border: 0;
+            background: transparent;
+            padding: 11px 12px;
+            border-radius: 10px;
+            color: var(--muted);
+            text-align: left;
+            font-weight: 850;
+            cursor: pointer;
+        }
+        .side-nav button.active { background: #e9f6f6; color: var(--brand); }
+        .stat { padding: 16px; min-height: 124px; }
+        .stat-value { margin-top: 10px; font-size: 28px; font-weight: 950; }
+        .stat-foot { margin-top: 8px; color: var(--muted); font-size: 12px; }
+        .bar-chart { height: 220px; display: flex; align-items: end; gap: 12px; padding: 18px; border-top: 1px solid #edf1f5; }
+        .bar { flex: 1; min-width: 0; background: linear-gradient(180deg, #74c7c7, var(--brand)); border-radius: 8px 8px 4px 4px; position: relative; }
+        .bar span { position: absolute; left: 50%; bottom: -24px; transform: translateX(-50%); color: #98a2b3; font-size: 11px; }
+        .kv { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid #edf1f5; font-size: 13px; }
+        .kv div:first-child { color: var(--muted); }
+        .switch {
+            width: 42px;
+            height: 24px;
+            border-radius: 999px;
+            background: var(--brand);
+            position: relative;
+            flex-shrink: 0;
+        }
+        .switch.off { background: #d0d5dd; }
+        .switch::after { content: ""; width: 18px; height: 18px; border-radius: 50%; background: #fff; position: absolute; top: 3px; left: 19px; box-shadow: 0 2px 6px rgba(16,24,40,.18); }
+        .switch.off::after { left: 3px; }
+        .setting-row { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid #edf1f5; }
+        .toast {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: #101828;
+            color: #fff;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: .18s ease;
+            z-index: 50;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .loading, .empty { padding: 34px; color: var(--muted); text-align: center; }
+
+        @media (max-width: 980px) {
+            .topbar { height: auto; padding: 14px; flex-wrap: wrap; }
+            .nav { width: 100%; overflow-x: auto; }
+            main { width: calc(100vw - 24px); }
+            .split, .account-layout, .admin-shell, .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+            .sidebar { min-height: 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <a class="brand" href="/radar">
+        <div class="logo">雷</div>
+        <div>
+            <div class="brand-title">A 股舆情雷达</div>
+            <div class="brand-sub">账号 · 订阅 · 后台</div>
+        </div>
+    </a>
+    <nav class="nav">
+        <a href="/radar">今日</a>
+        <button data-mode="login">登录</button>
+        <a href="/radar/subscription">订阅</a>
+        <a href="/radar/account">账户</a>
+        <a href="/radar/admin">后台</a>
+    </nav>
+    <span class="badge">仅供舆情观察 · 不构成投资建议</span>
+</div>
+
+<main>
+    <section class="page" id="page-login">
+        <div class="split">
+            <div class="card login-panel">
+                <span class="pill ok">首次进入需确认风险声明</span>
+                <h1 style="margin-top:16px">登录后查看今日 3 条预判解析</h1>
+                <p class="body" style="margin-top:12px">平台只整理公开信息、舆情变化和证据链，不提供交易建议、目标价或仓位指令。</p>
+
+                <div style="display:flex;gap:8px;margin:22px 0 18px">
+                    <span class="pill">验证码登录</span>
+                    <span class="pill gray">密码登录</span>
+                </div>
+
+                <form id="loginForm">
+                    <div class="form-row">
+                        <label>手机 / 邮箱</label>
+                        <input id="loginAccount" value="{{ login_account|default('user@example.com') }}">
+                    </div>
+                    <div class="form-row">
+                        <label>验证码</label>
+                        <div style="display:grid;grid-template-columns:1fr 116px;gap:10px">
+                            <input id="loginCode" value="382916">
+                            <button class="btn" type="button">获取验证码</button>
+                        </div>
+                    </div>
+                    <label class="checkbox">
+                        <input id="riskConfirmed" type="checkbox" checked>
+                        <span>我已阅读并确认：本平台仅用于公开信息整理、舆情观察和风险提示，不构成投资建议，也不承诺任何收益。</span>
+                    </label>
+                    <button class="btn primary full" style="margin-top:18px" type="submit">登录并进入今日页</button>
+                </form>
+
+                <div class="flat" style="margin-top:20px;padding:16px">
+                    <h3>确认后系统记录</h3>
+                    <div class="grid grid-2" style="margin-top:12px">
+                        <div><div class="small">声明版本</div><b>v2026.06</b></div>
+                        <div><div class="small">记录内容</div><b>时间 / IP / 账号</b></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card preview">
+                <h2>今日只看这 3 条</h2>
+                <p class="body" style="margin-top:8px">今日主线偏向 AI 算力与半导体，但部分个股出现先动后闻。</p>
+                <div class="flat mini-card"><span class="pill blue">同步共振</span><h3 style="margin-top:10px">AI 算力热度继续扩散</h3><p class="body">新闻、社媒与板块关注度同步增强。</p></div>
+                <div class="flat mini-card"><span class="pill warn">先动后闻</span><h3 style="margin-top:10px">半导体局部异动后出现解释性新闻</h3><p class="body">需重点观察消息兑现风险。</p></div>
+                <div class="flat mini-card"><span class="pill gray">动而无闻</span><h3 style="margin-top:10px">部分低空经济标的暂无清晰新闻支撑</h3><p class="body">等待公告或权威来源补证。</p></div>
+                <div class="lock-box">
+                    <div style="font-size:30px">🔒</div>
+                    <h2 style="margin-top:10px">登录后查看完整证据链</h2>
+                    <p class="body" style="margin-top:8px">包含时间线、风险边界和下一步观察。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="page" id="page-subscription">
+        <div class="card" style="padding:24px;margin-bottom:18px">
+            <span class="pill ok">核心价值：节省信息筛选时间</span>
+            <h1 style="margin-top:12px">按证据深度和推送频率选择套餐</h1>
+            <p class="body" style="margin-top:10px">套餐不提供交易指令。付费权益只增加解析深度、关注数量、历史回看和高风险提醒。</p>
+        </div>
+        <div class="grid grid-4" id="plans"></div>
+        <div class="card" style="margin-top:18px;padding:18px">
+            <div class="section-title"><h2>权益对比</h2><span class="small">原型数据，可由后台配置</span></div>
+            <div id="planCompare"></div>
+        </div>
+    </section>
+
+    <section class="page" id="page-account">
+        <div id="accountContent" class="loading">正在读取账户...</div>
+    </section>
+
+    <section class="page" id="page-admin">
+        <div class="admin-shell">
+            <aside class="card sidebar">
+                <div class="brand">
+                    <div class="logo">雷</div>
+                    <div><div class="brand-title">管理后台</div><div class="brand-sub">平台运营配置</div></div>
+                </div>
+                <div class="side-nav">
+                    <button class="active" data-admin-tab="overview">概览</button>
+                    <button data-admin-tab="users">用户管理</button>
+                    <button data-admin-tab="plans">订阅管理</button>
+                    <button data-admin-tab="settings">平台设置</button>
+                </div>
+            </aside>
+            <section id="adminContent" class="loading">正在读取后台...</section>
+        </div>
+    </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    const initialMode = "{{ initial_mode|default('login') }}";
+    const nextUrl = "{{ next_url|default('/radar') }}";
+    const state = { plans: null, account: null, admin: { tab: 'overview' } };
+
+    const $ = selector => document.querySelector(selector);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+
+    function toast(message) {
+        const el = $('#toast');
+        el.textContent = message;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 1800);
+    }
+
+    async function fetchJson(url, options) {
+        const response = await fetch(url, options);
+        const data = await response.json();
+        if (response.status === 401 && data.login_url) {
+            location.href = data.login_url;
+            throw new Error(data.message || '请先登录');
+        }
+        if (!response.ok || data.success === false) throw new Error(data.message || '请求失败');
+        return data;
+    }
+
+    function switchMode(mode) {
+        document.querySelectorAll('.nav button').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+        document.querySelectorAll('.page').forEach(page => page.classList.toggle('active', page.id === `page-${mode}`));
+        if (mode === 'subscription') loadPlans();
+        if (mode === 'account') loadAccount();
+        if (mode === 'admin') loadAdmin(state.admin.tab);
+    }
+
+    function renderPlans(data) {
+        state.plans = data.plans;
+        $('#plans').innerHTML = data.plans.map(plan => `
+            <article class="card plan ${plan.recommended ? 'recommended' : ''}">
+                <span class="pill ${plan.recommended ? 'ok' : 'gray'}">${escapeHtml(plan.audience)}</span>
+                <h2>${escapeHtml(plan.name)}</h2>
+                <div class="price">¥${escapeHtml(plan.price_month)} <small>/ 月</small></div>
+                <p class="body">${escapeHtml(plan.summary)}</p>
+                <div class="features">
+                    ${plan.features.map(item => `<div class="feature"><span>✓</span><span>${escapeHtml(item)}</span></div>`).join('')}
+                </div>
+                <button class="btn ${plan.id === data.current_plan_id ? '' : 'primary'} full" style="margin-top:auto" data-subscribe="${escapeHtml(plan.id)}">
+                    ${plan.id === data.current_plan_id ? '当前方案' : `选择${escapeHtml(plan.name)}`}
+                </button>
+            </article>
+        `).join('');
+        $('#planCompare').innerHTML = `
+            <table>
+                <tr><th>套餐</th><th>今日预判</th><th>证据链</th><th>关注对象</th><th>历史回看</th><th>AI 额度</th></tr>
+                ${data.plans.map(plan => `
+                    <tr>
+                        <td><b>${escapeHtml(plan.name)}</b></td>
+                        <td>${escapeHtml(plan.limits.today_predictions)}</td>
+                        <td>${escapeHtml(plan.limits.evidence_depth)}</td>
+                        <td>${escapeHtml(plan.limits.watchlist_limit)}</td>
+                        <td>${escapeHtml(plan.limits.history_days)} 天</td>
+                        <td>${escapeHtml(plan.limits.ai_quota)}</td>
+                    </tr>
+                `).join('')}
+            </table>
+        `;
+        document.querySelectorAll('[data-subscribe]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const result = await fetchJson('/api/account/subscribe', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({plan_id: btn.dataset.subscribe})
+                });
+                toast(result.message);
+                loadPlans();
+            });
+        });
+    }
+
+    async function loadPlans() {
+        if (!state.plans) $('#plans').innerHTML = '<div class="loading">正在读取套餐...</div>';
+        renderPlans(await fetchJson('/api/account/plans'));
+    }
+
+    function renderAccount(data) {
+        const usage = Object.values(data.usage);
+        $('#accountContent').innerHTML = `
+            <div class="account-layout">
+                <div class="grid">
+                    <div class="card" style="padding:22px">
+                        <div style="display:flex;justify-content:space-between;gap:18px;align-items:flex-start">
+                            <div>
+                                <span class="pill ok">当前套餐</span>
+                                <h1 style="margin-top:12px">${escapeHtml(data.subscription.plan_name)}</h1>
+                                <p class="body" style="margin-top:8px">到期时间：${escapeHtml(data.subscription.expires_at)} · 自动续费${data.subscription.renewal ? '开启' : '关闭'}</p>
+                            </div>
+                            <button class="btn primary" onclick="switchMode('subscription')">升级 / 续费</button>
+                        </div>
+                    </div>
+                    <div class="card" style="padding:20px">
+                        <div class="section-title"><h2>权益用量</h2><span class="small">原型内存态</span></div>
+                        <div class="grid grid-2">
+                            ${usage.map(item => {
+                                const pct = Math.min(100, Math.round(item.used / item.limit * 100));
+                                return `<div class="flat" style="padding:16px"><div class="small">${escapeHtml(item.label)}</div><h2 style="margin-top:8px">${escapeHtml(item.used)} / ${escapeHtml(item.limit)}</h2><div class="meter"><span style="width:${pct}%"></span></div></div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                    <div class="card" style="padding:20px">
+                        <div class="section-title"><h2>账单记录</h2></div>
+                        <table>
+                            <tr><th>订单号</th><th>套餐</th><th>金额</th><th>状态</th><th>时间</th></tr>
+                            ${data.bills.map(row => `<tr><td>${escapeHtml(row.id)}</td><td>${escapeHtml(row.plan)}</td><td>¥${escapeHtml(row.amount)}</td><td><span class="pill ok">${escapeHtml(row.status)}</span></td><td>${escapeHtml(row.paid_at)}</td></tr>`).join('')}
+                        </table>
+                    </div>
+                </div>
+                <div class="grid">
+                    <div class="card" style="padding:20px">
+                        <h2>安全设置</h2>
+                        <div class="kv"><div>手机</div><div>${escapeHtml(data.user.phone)}</div></div>
+                        <div class="kv"><div>邮箱</div><div>${escapeHtml(data.user.email)}</div></div>
+                        <div class="kv"><div>角色</div><div>${escapeHtml(data.user.role_label)}</div></div>
+                        <div class="kv"><div>最近登录</div><div>${escapeHtml(data.user.last_login_at)}</div></div>
+                    </div>
+                    <div class="card" style="padding:20px">
+                        <h2>风险确认记录</h2>
+                        ${data.risk_confirmations.map(item => `<div class="flat" style="padding:14px;margin-top:12px"><b>${escapeHtml(item.version)}</b><p class="body">${escapeHtml(item.confirmed_at)} · ${escapeHtml(item.ip)} · ${escapeHtml(item.status)}</p></div>`).join('')}
+                    </div>
+                    <div class="card" style="padding:20px"><p class="body">订阅只增加舆情摘要、证据链深度、关注数量和推送能力，不代表任何投资结果。</p></div>
+                </div>
+            </div>
+        `;
+    }
+
+    async function loadAccount() {
+        $('#accountContent').innerHTML = '<div class="loading">正在读取账户...</div>';
+        renderAccount(await fetchJson('/api/account'));
+    }
+
+    async function loadAdmin(tab) {
+        state.admin.tab = tab;
+        document.querySelectorAll('[data-admin-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.adminTab === tab));
+        $('#adminContent').innerHTML = '<div class="loading">正在读取后台...</div>';
+        if (tab === 'overview') return renderAdminOverview(await fetchJson('/api/admin/overview'));
+        if (tab === 'users') return renderAdminUsers(await fetchJson('/api/admin/users'));
+        if (tab === 'plans') return renderAdminPlans(await fetchJson('/api/admin/plans'));
+        if (tab === 'settings') return renderAdminSettings(await fetchJson('/api/admin/settings'));
+    }
+
+    function renderAdminOverview(data) {
+        $('#adminContent').innerHTML = `
+            <div class="section-title"><div><h1>后台概览</h1><p class="body">平台健康、订阅收入、AI 成本和高风险输出。</p></div><span class="badge">今日合规拦截 17 次</span></div>
+            <div class="grid grid-4">
+                ${data.stats.map(item => `<div class="card stat"><span class="pill ${escapeHtml(item.tone)}">${escapeHtml(item.label)}</span><div class="stat-value">${escapeHtml(item.value)}</div><div class="stat-foot">${escapeHtml(item.trend)}</div></div>`).join('')}
+            </div>
+            <div class="grid" style="grid-template-columns:1.45fr .85fr;margin-top:18px">
+                <div class="card"><div style="padding:18px 20px"><h2>近 7 日订阅与活跃</h2><p class="body">活跃、查看证据、付费转化趋势</p></div><div class="bar-chart">${data.trend.map(item => `<div class="bar" style="height:${escapeHtml(item.active)}%"><span>${escapeHtml(item.day)}</span></div>`).join('')}</div></div>
+                <div class="card" style="padding:20px"><h2>数据源健康</h2>${data.data_sources.map(item => `<div class="setting-row"><div><b>${escapeHtml(item.name)}</b><p class="small">${escapeHtml(item.note)}</p></div><span class="pill ${item.status === '正常' ? 'ok' : 'warn'}">${escapeHtml(item.status)}</span></div>`).join('')}</div>
+            </div>
+        `;
+    }
+
+    function renderAdminUsers(data) {
+        $('#adminContent').innerHTML = `
+            <div class="section-title"><div><h1>用户管理</h1><p class="body">查看用户、套餐、权益用量、风险确认与备注。</p></div><button class="btn primary">新增用户</button></div>
+            <div class="card" style="overflow:hidden">
+                <div style="padding:16px;display:grid;grid-template-columns:1fr 150px 150px;gap:10px;border-bottom:1px solid var(--line)"><input value="搜索手机 / 邮箱 / 昵称"><select><option>全部套餐</option></select><select><option>全部状态</option></select></div>
+                <table>
+                    <tr><th>用户</th><th>角色</th><th>套餐</th><th>权益用量</th><th>状态</th><th>最近活跃</th><th>操作</th></tr>
+                    ${data.users.map(user => `<tr><td><b>${escapeHtml(user.name)}</b><br><span class="small">${escapeHtml(user.email)}</span></td><td>${escapeHtml(user.role)}</td><td>${escapeHtml(user.plan)}<br><span class="small">${escapeHtml(user.expires_at)}</span></td><td>${escapeHtml(user.usage)}</td><td><span class="pill ${user.status === '正常' ? 'ok' : user.status === '冻结' ? 'danger' : 'warn'}">${escapeHtml(user.status)}</span></td><td>${escapeHtml(user.last_active)}</td><td><button class="btn" data-user="${escapeHtml(user.id)}">详情</button></td></tr>`).join('')}
+                </table>
+            </div>
+        `;
+        document.querySelectorAll('[data-user]').forEach(btn => btn.addEventListener('click', async () => {
+            const data = await fetchJson(`/api/admin/users/${encodeURIComponent(btn.dataset.user)}`);
+            toast(`${data.user.name}：${data.user.note}`);
+        }));
+    }
+
+    function renderAdminPlans(data) {
+        $('#adminContent').innerHTML = `
+            <div class="section-title"><div><h1>套餐与权益设置</h1><p class="body">无代码配置价格、权益、推送、历史回看和 AI 额度。</p></div><button class="btn primary" id="savePlans">保存配置</button></div>
+            <div class="grid grid-2">
+                ${data.plans.filter(plan => plan.id !== 'free').slice(0, 2).map(plan => `
+                    <div class="card" style="padding:20px">
+                        <div style="display:flex;justify-content:space-between"><h2>${escapeHtml(plan.name)}</h2><span class="pill ok">${escapeHtml(plan.status)}</span></div>
+                        <div class="grid grid-2" style="margin-top:16px">
+                            <div class="form-row"><label>月付价格</label><input value="${escapeHtml(plan.price_month)}"></div>
+                            <div class="form-row"><label>年付价格</label><input value="${escapeHtml(plan.price_year)}"></div>
+                            <div class="form-row"><label>今日预判条数</label><input value="${escapeHtml(plan.limits.today_predictions)}"></div>
+                            <div class="form-row"><label>关注对象上限</label><input value="${escapeHtml(plan.limits.watchlist_limit)}"></div>
+                            <div class="form-row"><label>证据链深度</label><input value="${escapeHtml(plan.limits.evidence_depth)}"></div>
+                            <div class="form-row"><label>历史回看</label><input value="${escapeHtml(plan.limits.history_days)} 天"></div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        $('#savePlans').addEventListener('click', () => toast('套餐配置已保存（原型模式）'));
+    }
+
+    function renderAdminSettings(data) {
+        const s = data.settings;
+        $('#adminContent').innerHTML = `
+            <div class="section-title"><div><h1>平台设置</h1><p class="body">配置今日 3 条、情景判断、风险规则、合规输出和模型成本。</p></div><button class="btn primary" id="saveSettings">保存设置</button></div>
+            <div class="grid grid-3">
+                <div class="card" style="padding:20px"><h2>今日 3 条规则</h2>
+                    ${Object.entries(s.today_rules).map(([key, value]) => `<div class="setting-row"><div><b>${escapeHtml(key)}</b><p class="small">当前值：${escapeHtml(value)}</p></div><div class="switch ${value ? '' : 'off'}"></div></div>`).join('')}
+                </div>
+                <div class="card" style="padding:20px"><h2>情景判断时间窗</h2>
+                    ${Object.entries(s.scenario_windows).map(([key, value]) => `<div class="form-row" style="margin-top:12px"><label>${escapeHtml(key)}</label><input value="${escapeHtml(value)}"></div>`).join('')}
+                </div>
+                <div class="card" style="padding:20px"><h2>风险规则</h2>
+                    ${Object.entries(s.risk_rules).map(([key, value]) => `<div class="setting-row"><div><b>${escapeHtml(key)}</b><p class="small">高亮或降权处理</p></div><div class="switch ${value ? '' : 'off'}"></div></div>`).join('')}
+                </div>
+            </div>
+            <div class="grid grid-3" style="margin-top:18px">
+                <div class="card" style="padding:20px"><h2>合规输出</h2><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">${s.compliance.forbidden_words.map(word => `<span class="pill danger">${escapeHtml(word)}</span>`).join('')}</div><textarea style="margin-top:14px">${escapeHtml(s.compliance.disclaimer)}</textarea></div>
+                <div class="card" style="padding:20px"><h2>推送设置</h2>${Object.entries(s.push).map(([key, item]) => `<div class="setting-row"><div><b>${escapeHtml(key)}</b><p class="small">${escapeHtml(item.time)}</p></div><div class="switch ${item.enabled ? '' : 'off'}"></div></div>`).join('')}</div>
+                <div class="card" style="padding:20px"><h2>模型与成本</h2><div class="form-row" style="margin-top:14px"><label>主模型</label><input value="${escapeHtml(s.model.primary_model)}"></div><div class="form-row"><label>今日成本上限</label><input value="¥${escapeHtml(s.model.daily_cost_limit)}"></div><div class="form-row"><label>超时</label><input value="${escapeHtml(s.model.timeout_seconds)} 秒"></div></div>
+            </div>
+        `;
+        $('#saveSettings').addEventListener('click', async () => {
+            const result = await fetchJson('/api/admin/settings', {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            });
+            toast(result.message);
+        });
+    }
+
+    document.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => switchMode(btn.dataset.mode)));
+    document.querySelectorAll('[data-admin-tab]').forEach(btn => btn.addEventListener('click', () => loadAdmin(btn.dataset.adminTab)));
+
+    $('#loginForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const confirmed = $('#riskConfirmed').checked;
+        if (!confirmed) return toast('请先确认风险声明');
+        const result = await fetchJson('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({account: $('#loginAccount').value, code: $('#loginCode').value, risk_confirmed: confirmed})
+        });
+        toast(result.message);
+        setTimeout(() => location.href = nextUrl, 500);
+    });
+
+    switchMode(initialMode);
+</script>
+</body>
+</html>

@@ -15,7 +15,7 @@ import time
 import threading
 from datetime import datetime
 from queue import Queue
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, redirect, session
 from flask_socketio import SocketIO, emit
 import atexit
 import requests
@@ -23,6 +23,33 @@ from loguru import logger
 import importlib
 from pathlib import Path
 from MindSpider.main import MindSpider
+from SentimentRadar.service import (
+    get_my_focus as get_radar_my_focus,
+    get_prediction_detail,
+    get_settings as get_radar_settings,
+    get_today_briefing,
+    update_settings as update_radar_settings,
+)
+from SentimentRadar.platform_service import (
+    confirm_risk as confirm_radar_risk,
+    get_account as get_radar_account,
+    get_admin_overview as get_radar_admin_overview,
+    get_admin_plans as get_radar_admin_plans,
+    get_admin_settings as get_radar_admin_settings,
+    get_admin_user as get_radar_admin_user,
+    get_audit_logs as get_radar_audit_logs,
+    get_bills as get_radar_bills,
+    get_current_user as get_radar_current_user,
+    get_plans as get_radar_plans,
+    get_subscription as get_radar_subscription,
+    get_usage as get_radar_usage,
+    list_admin_users as list_radar_admin_users,
+    login as login_radar_user,
+    subscribe as subscribe_radar_plan,
+    update_admin_plan as update_radar_admin_plan,
+    update_admin_settings as update_radar_admin_settings,
+    update_admin_user as update_radar_admin_user,
+)
 
 # 导入ReportEngine
 try:
@@ -926,10 +953,330 @@ def _start_async_shutdown(cleanup_timeout: float = 3.0):
 # 注册清理函数
 atexit.register(cleanup_processes)
 
+RADAR_SESSION_USER_KEY = 'radar_user'
+RADAR_SESSION_SUBSCRIPTION_KEY = 'radar_subscription'
+
+
+def _safe_radar_next(next_url):
+    """只允许跳回本应用内部雷达路径，避免开放重定向。"""
+    if not next_url or not isinstance(next_url, str):
+        return '/radar'
+    if next_url.startswith('//') or '://' in next_url:
+        return '/radar'
+    if not next_url.startswith('/radar'):
+        return '/radar'
+    if next_url.startswith('/radar/login'):
+        return '/radar'
+    return next_url
+
+
+def _radar_current_session_user():
+    user = session.get(RADAR_SESSION_USER_KEY)
+    return user if isinstance(user, dict) else None
+
+
+def _radar_logged_in():
+    user = _radar_current_session_user()
+    return bool(user and user.get('risk_confirmed'))
+
+
+def _radar_is_admin():
+    user = _radar_current_session_user()
+    return bool(user and user.get('role') in {'admin', 'super_admin'})
+
+
+def _radar_login_url_for_request():
+    path = request.path or '/radar'
+    if path.startswith('/api/admin'):
+        next_url = '/radar/admin'
+    elif path.startswith('/api/account'):
+        next_url = '/radar/account'
+    else:
+        next_url = '/radar'
+    return f'/radar/login?next={next_url}'
+
+
+def _radar_unauthorized_json(message='请先登录并确认风险声明'):
+    return jsonify({
+        'success': False,
+        'message': message,
+        'login_url': _radar_login_url_for_request(),
+    }), 401
+
+
+def _require_radar_login_json():
+    if not _radar_logged_in():
+        return _radar_unauthorized_json()
+    return None
+
+
+def _require_radar_admin_json():
+    login_error = _require_radar_login_json()
+    if login_error:
+        return login_error
+    if not _radar_is_admin():
+        return jsonify({'success': False, 'message': '无管理员权限'}), 403
+    return None
+
+
 @app.route('/')
 def index():
     """主页"""
     return render_template('index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    """避免浏览器默认 favicon 请求产生无意义 404。"""
+    return Response(status=204)
+
+@app.route('/console')
+def console():
+    """舆论炒股推送控制台（静态原型，Mock 数据）"""
+    return render_template('console.html')
+
+@app.route('/radar')
+def sentiment_radar():
+    """A 股舆情雷达极简预判版。"""
+    if not _radar_logged_in():
+        return redirect('/radar/login?next=/radar')
+    return render_template('sentiment_radar.html')
+
+@app.route('/radar/login')
+def sentiment_radar_login():
+    """A 股舆情雷达登录与风险确认。"""
+    next_url = _safe_radar_next(request.args.get('next') or '/radar')
+    login_account = 'ops@radar.cn' if next_url.startswith('/radar/admin') else 'user@example.com'
+    return render_template(
+        'radar_platform.html',
+        initial_mode='login',
+        next_url=next_url,
+        login_account=login_account,
+    )
+
+@app.route('/radar/subscription')
+def sentiment_radar_subscription():
+    """A 股舆情雷达订阅中心。"""
+    return render_template('radar_platform.html', initial_mode='subscription')
+
+@app.route('/radar/account')
+def sentiment_radar_account():
+    """A 股舆情雷达个人账户。"""
+    if not _radar_logged_in():
+        return redirect('/radar/login?next=/radar/account')
+    return render_template('radar_platform.html', initial_mode='account')
+
+@app.route('/radar/admin')
+def sentiment_radar_admin():
+    """A 股舆情雷达管理后台。"""
+    if not _radar_logged_in():
+        return redirect('/radar/login?next=/radar/admin')
+    if not _radar_is_admin():
+        return Response('无管理员权限，请使用管理员账号登录。', status=403, mimetype='text/plain')
+    return render_template('radar_platform.html', initial_mode='admin')
+
+@app.route('/api/radar/today')
+def api_radar_today():
+    """返回今日 3 条极简预判。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_today_briefing())
+
+@app.route('/api/radar/predictions/<card_id>')
+def api_radar_prediction_detail(card_id):
+    """返回单条预判的证据链和解析抽屉数据。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    result = get_prediction_detail(card_id)
+    status = 200 if result.get('success') else 404
+    return jsonify(result), status
+
+@app.route('/api/radar/my')
+def api_radar_my_focus():
+    """返回我的关注命中和当前设置摘要。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_radar_my_focus())
+
+@app.route('/api/radar/settings', methods=['GET', 'POST'])
+def api_radar_settings():
+    """读取或更新极简雷达设置。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    if request.method == 'GET':
+        return jsonify(get_radar_settings())
+    payload = request.get_json(silent=True) or {}
+    return jsonify(update_radar_settings(payload))
+
+@app.route('/api/auth/login', methods=['POST'])
+def api_auth_login():
+    """原型登录接口：验证码/密码登录统一返回 Mock 会话。"""
+    payload = request.get_json(silent=True) or {}
+    if not payload.get('risk_confirmed'):
+        return jsonify({'success': False, 'message': '请先确认风险声明'}), 400
+    result = login_radar_user(payload)
+    if result.get('success'):
+        session[RADAR_SESSION_USER_KEY] = result.get('user', {})
+        session[RADAR_SESSION_SUBSCRIPTION_KEY] = result.get('subscription', {})
+    return jsonify(result)
+
+@app.route('/api/auth/logout', methods=['POST'])
+def api_auth_logout():
+    """原型退出接口。"""
+    session.pop(RADAR_SESSION_USER_KEY, None)
+    session.pop(RADAR_SESSION_SUBSCRIPTION_KEY, None)
+    return jsonify({'success': True, 'message': '已退出登录（原型模式）'})
+
+@app.route('/api/auth/me')
+def api_auth_me():
+    """返回当前原型用户。"""
+    user = _radar_current_session_user()
+    if not user:
+        return jsonify({
+            'success': False,
+            'message': '未登录',
+            'login_url': '/radar/login?next=/radar',
+        }), 401
+    return jsonify({
+        'success': True,
+        'user': user,
+        'subscription': session.get(RADAR_SESSION_SUBSCRIPTION_KEY, {}),
+    })
+
+@app.route('/api/auth/risk-confirmation', methods=['POST'])
+def api_auth_risk_confirmation():
+    """记录风险声明确认。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    payload = request.get_json(silent=True) or {}
+    result = confirm_radar_risk(payload)
+    if result.get('success'):
+        user = _radar_current_session_user() or {}
+        user['risk_confirmed'] = True
+        user['risk_version'] = result.get('record', {}).get('version', 'v2026.06')
+        session[RADAR_SESSION_USER_KEY] = user
+    return jsonify(result)
+
+@app.route('/api/account/plans')
+def api_account_plans():
+    """返回可订阅套餐。"""
+    return jsonify(get_radar_plans())
+
+@app.route('/api/account/subscribe', methods=['POST'])
+def api_account_subscribe():
+    """原型订阅接口：仅切换内存态套餐，不发起真实支付。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    payload = request.get_json(silent=True) or {}
+    result = subscribe_radar_plan(payload)
+    if result.get('success'):
+        session[RADAR_SESSION_SUBSCRIPTION_KEY] = result.get('subscription', {})
+    return jsonify(result)
+
+@app.route('/api/account/subscription')
+def api_account_subscription():
+    """返回当前订阅。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_radar_subscription())
+
+@app.route('/api/account/usage')
+def api_account_usage():
+    """返回权益用量。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_radar_usage())
+
+@app.route('/api/account/bills')
+def api_account_bills():
+    """返回账单记录。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_radar_bills())
+
+@app.route('/api/account')
+def api_account():
+    """返回个人账户聚合数据。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_radar_account())
+
+@app.route('/api/admin/overview')
+def api_admin_overview():
+    """返回管理后台概览。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_radar_admin_overview())
+
+@app.route('/api/admin/users')
+def api_admin_users():
+    """返回后台用户列表。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    return jsonify(list_radar_admin_users())
+
+@app.route('/api/admin/users/<user_id>', methods=['GET', 'PATCH'])
+def api_admin_user_detail(user_id):
+    """读取或更新后台用户。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    if request.method == 'GET':
+        result = get_radar_admin_user(user_id)
+    else:
+        payload = request.get_json(silent=True) or {}
+        result = update_radar_admin_user(user_id, payload)
+    status = 200 if result.get('success') else 404
+    return jsonify(result), status
+
+@app.route('/api/admin/plans')
+def api_admin_plans():
+    """返回后台套餐配置。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_radar_admin_plans())
+
+@app.route('/api/admin/plans/<plan_id>', methods=['PATCH'])
+def api_admin_plan_detail(plan_id):
+    """更新后台套餐配置。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    payload = request.get_json(silent=True) or {}
+    result = update_radar_admin_plan(plan_id, payload)
+    status = 200 if result.get('success') else 404
+    return jsonify(result), status
+
+@app.route('/api/admin/settings', methods=['GET', 'PATCH'])
+def api_admin_settings():
+    """读取或更新平台设置。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    if request.method == 'GET':
+        return jsonify(get_radar_admin_settings())
+    payload = request.get_json(silent=True) or {}
+    return jsonify(update_radar_admin_settings(payload))
+
+@app.route('/api/admin/audit-logs')
+def api_admin_audit_logs():
+    """返回审计日志。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_radar_audit_logs())
 
 @app.route('/api/status')
 def get_status():

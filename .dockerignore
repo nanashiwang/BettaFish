@@ -10,3 +10,7 @@ __pycache__
 *.sqlite3
 .DS_Store
 Thumbs.db
+.venv
+db_data
+tmp
+SentimentRadar/frontend/node_modules

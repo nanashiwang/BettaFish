@@ -10,6 +10,7 @@ export interface ApiResult {
 export interface RadarUser {
   id: string
   name: string
+  username?: string
   email: string
   phone: string
   role: 'subscriber' | 'admin' | 'super_admin' | string
@@ -37,6 +38,7 @@ export interface LoginPayload {
 
 export interface RegisterPayload {
   email: string
+  username: string
   password: string
   risk_confirmed: boolean
 }

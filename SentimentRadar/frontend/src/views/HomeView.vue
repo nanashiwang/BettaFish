@@ -195,8 +195,60 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 .hero {
   text-align: center;
   padding: 88px 24px 72px;
-  background: linear-gradient(160deg, #0f4c5c 0%, #176b87 55%, #2d9596 100%);
+  background: linear-gradient(160deg, #0a3744 0%, #176b87 55%, #2d9596 100%);
   color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 漂浮光斑：让品牌渐变更有层次 */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(460px 460px at 15% 25%, rgba(116, 199, 199, 0.4), transparent 65%),
+    radial-gradient(560px 560px at 88% 80%, rgba(255, 196, 110, 0.18), transparent 60%),
+    radial-gradient(320px 320px at 75% 10%, rgba(45, 149, 150, 0.5), transparent 65%);
+  filter: blur(12px);
+  animation: hero-drift 18s ease-in-out infinite alternate;
+}
+
+/* 雷达扫描环：呼应产品主题 */
+.hero::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -340px;
+  width: 760px;
+  height: 760px;
+  margin-left: -380px;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.09) 0 1px, transparent 1px 76px),
+    conic-gradient(from 0deg, rgba(116, 199, 199, 0.22), transparent 75deg, transparent 360deg);
+  animation: hero-radar 16s linear infinite;
+  pointer-events: none;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes hero-drift {
+  from {
+    transform: translate3d(-2%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 3%, 0) scale(1.06);
+  }
+}
+
+@keyframes hero-radar {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .hero h1 {
@@ -233,6 +285,11 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 
 .features {
   padding: 72px 0;
+  /* 柔和过渡到样例区的浅色背景 */
+  background:
+    radial-gradient(600px 280px at 12% 0%, rgba(45, 149, 150, 0.08), transparent 70%),
+    radial-gradient(600px 280px at 88% 100%, rgba(23, 107, 135, 0.07), transparent 70%),
+    linear-gradient(180deg, #fff 0%, #f7fafb 100%);
 }
 
 .features h2,

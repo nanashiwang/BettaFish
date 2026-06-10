@@ -1,8 +1,8 @@
 <template>
-  <div class="login-page">
-    <div class="login-card">
-      <div class="brand">
-        <div class="logo">雷</div>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-logo">雷</div>
         <div>
           <h1>A 股舆情雷达</h1>
           <p class="muted">仅供舆情观察 · 不构成投资建议</p>
@@ -13,7 +13,7 @@
         <el-form-item label="账号">
           <el-input
             v-model="account"
-            placeholder="邮箱或手机号（演示：user@example.com / ops@radar.cn）"
+            placeholder="邮箱或用户名"
             size="large"
             clearable
           />
@@ -23,7 +23,7 @@
             v-model="password"
             type="password"
             show-password
-            placeholder="演示账号任意密码；注册账号请输入注册密码"
+            placeholder="请输入密码"
             size="large"
           />
         </el-form-item>
@@ -35,7 +35,7 @@
         <el-button
           type="primary"
           size="large"
-          class="submit-btn"
+          class="auth-submit"
           native-type="submit"
           :loading="loading"
           :disabled="!canSubmit"
@@ -44,7 +44,7 @@
         </el-button>
       </el-form>
 
-      <p class="muted hint">
+      <p class="muted auth-hint">
         没有账号？
         <router-link :to="{ path: '/register', query: route.query }">立即注册</router-link>
       </p>
@@ -62,7 +62,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const account = ref('user@example.com')
+const account = ref('')
 const password = ref('')
 const riskConfirmed = ref(false)
 const loading = ref(false)
@@ -97,55 +97,3 @@ async function handleLogin() {
   }
 }
 </script>
-
-<style scoped>
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #0f4c5c 0%, #176b87 55%, #2d9596 100%);
-  padding: 20px;
-}
-
-.login-card {
-  width: 420px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 36px 32px 28px;
-  box-shadow: 0 24px 64px rgba(8, 48, 62, 0.35);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 28px;
-}
-
-.logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--radar-brand);
-  color: #fff;
-  font-size: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand h1 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.submit-btn {
-  width: 100%;
-}
-
-.hint {
-  text-align: center;
-  margin-top: 18px;
-}
-</style>

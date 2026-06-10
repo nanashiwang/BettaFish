@@ -295,9 +295,14 @@ def _auth_success(user: Dict[str, Any], subscription: Dict[str, Any], message: s
 def register(payload: Dict[str, Any]) -> Dict[str, Any]:
     """注册：优先写入 PostgreSQL（radar_users 表），数据库不可用时降级为内存存储。"""
     email = str(payload.get("email") or "").strip().lower()
+    username = str(payload.get("username") or "").strip()
     password = str(payload.get("password") or "")
     if "@" not in email:
         return {"success": False, "message": "请输入有效邮箱"}
+    if not 2 <= len(username) <= 20:
+        return {"success": False, "message": "用户名需为 2-20 个字符"}
+    if "@" in username:
+        return {"success": False, "message": "用户名不能包含 @ 符号"}
     if len(password) < 6:
         return {"success": False, "message": "密码至少 6 位"}
     if email == CURRENT_USER["email"]:
@@ -309,12 +314,15 @@ def register(payload: Dict[str, Any]) -> Dict[str, Any]:
     if user_store.available():
         if user_store.get_user(email):
             return {"success": False, "message": "该邮箱已注册，请直接登录"}
+        if user_store.get_user(username):
+            return {"success": False, "message": "该用户名已被占用"}
         # 首个注册用户自动成为超级管理员，便于自部署后接管后台。
         is_first = user_store.count_users() == 0
         user = user_store.create_user(
             email=email,
+            username=username,
             password_hash=generate_password_hash(password),
-            name=email.split("@")[0],
+            name=username,
             role="super_admin" if is_first else "subscriber",
             role_label="超级管理员" if is_first else "订阅用户",
             risk_confirmed=risk_confirmed,
@@ -326,10 +334,16 @@ def register(payload: Dict[str, Any]) -> Dict[str, Any]:
     # ---- 内存降级 ----
     if email in REGISTERED_USERS:
         return {"success": False, "message": "该邮箱已注册，请直接登录"}
+    if any(
+        item["user"].get("username", "").lower() == username.lower()
+        for item in REGISTERED_USERS.values()
+    ):
+        return {"success": False, "message": "该用户名已被占用"}
     user = deepcopy(CURRENT_USER)
     user.update({
         "id": f"u_{10100 + len(REGISTERED_USERS)}",
-        "name": email.split("@")[0],
+        "name": username,
+        "username": username,
         "email": email,
         "phone": "",
         "plan_id": "free",
@@ -354,19 +368,26 @@ def login(payload: Dict[str, Any]) -> Dict[str, Any]:
     account_text = str(account).strip().lower()
     password = str(payload.get("password") or payload.get("code") or "")
 
-    # 已注册账号：校验密码哈希；未注册账号走下方原型任意登录（保留演示账号行为）。
+    # 已注册账号（邮箱或用户名）：校验密码哈希；未注册账号走下方原型任意登录（保留演示账号行为）。
     if user_store.available():
         stored = user_store.get_user(account_text)
         if stored:
             if not check_password_hash(stored["password_hash"], password):
                 return {"success": False, "message": "账号或密码错误"}
-            user_store.touch_login(account_text, confirmed)
+            user_store.touch_login(stored["user"]["email"], confirmed)
             user = stored["user"]
             user["risk_confirmed"] = confirmed
             user["last_login_at"] = _timestamp()
             return _auth_success(user, stored["subscription"] or _new_free_subscription(), "登录成功")
     else:
-        registered = REGISTERED_USERS.get(account_text)
+        registered = REGISTERED_USERS.get(account_text) or next(
+            (
+                item
+                for item in REGISTERED_USERS.values()
+                if item["user"].get("username", "").lower() == account_text
+            ),
+            None,
+        )
         if registered:
             if not check_password_hash(registered["password_hash"], password):
                 return {"success": False, "message": "账号或密码错误"}

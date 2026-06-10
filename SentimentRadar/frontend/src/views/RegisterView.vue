@@ -1,8 +1,8 @@
 <template>
-  <div class="register-page">
-    <div class="register-card">
-      <div class="brand">
-        <div class="logo">雷</div>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-logo">雷</div>
         <div>
           <h1>注册 A 股舆情雷达</h1>
           <p class="muted">仅供舆情观察 · 不构成投资建议</p>
@@ -10,6 +10,15 @@
       </div>
 
       <el-form @submit.prevent="handleRegister">
+        <el-form-item label="用户名">
+          <el-input
+            v-model="username"
+            placeholder="2-20 个字符，登录时可用"
+            size="large"
+            maxlength="20"
+            clearable
+          />
+        </el-form-item>
         <el-form-item label="邮箱">
           <el-input v-model="email" placeholder="用于登录的邮箱地址" size="large" clearable />
         </el-form-item>
@@ -39,7 +48,7 @@
         <el-button
           type="primary"
           size="large"
-          class="submit-btn"
+          class="auth-submit"
           native-type="submit"
           :loading="loading"
           :disabled="!canSubmit"
@@ -48,7 +57,7 @@
         </el-button>
       </el-form>
 
-      <p class="muted hint">
+      <p class="muted auth-hint">
         已有账号？
         <router-link :to="{ path: '/login', query: route.query }">去登录</router-link>
       </p>
@@ -66,6 +75,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
+const username = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -74,6 +84,8 @@ const loading = ref(false)
 
 const canSubmit = computed(
   () =>
+    username.value.trim().length >= 2 &&
+    !username.value.includes('@') &&
     email.value.includes('@') &&
     password.value.length >= 6 &&
     password.value === confirmPassword.value &&
@@ -94,6 +106,7 @@ async function handleRegister() {
   try {
     await auth.register({
       email: email.value.trim(),
+      username: username.value.trim(),
       password: password.value,
       risk_confirmed: riskConfirmed.value,
     })
@@ -106,55 +119,3 @@ async function handleRegister() {
   }
 }
 </script>
-
-<style scoped>
-.register-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #0f4c5c 0%, #176b87 55%, #2d9596 100%);
-  padding: 20px;
-}
-
-.register-card {
-  width: 420px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 36px 32px 28px;
-  box-shadow: 0 24px 64px rgba(8, 48, 62, 0.35);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 28px;
-}
-
-.logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--radar-brand);
-  color: #fff;
-  font-size: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand h1 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.submit-btn {
-  width: 100%;
-}
-
-.hint {
-  text-align: center;
-  margin-top: 18px;
-}
-</style>

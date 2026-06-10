@@ -28,3 +28,103 @@ body {
   color: #8492a6;
   font-size: 13px;
 }
+
+/* ---------- 登录/注册页共享背景：品牌渐变 + 漂浮光斑 + 雷达扫描环 ---------- */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0a3744 0%, #176b87 52%, #2d9596 100%);
+}
+
+.auth-page::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(420px 420px at 18% 22%, rgba(116, 199, 199, 0.45), transparent 65%),
+    radial-gradient(520px 520px at 85% 78%, rgba(255, 196, 110, 0.2), transparent 60%),
+    radial-gradient(300px 300px at 70% 12%, rgba(45, 149, 150, 0.5), transparent 65%);
+  filter: blur(10px);
+  animation: auth-drift 16s ease-in-out infinite alternate;
+}
+
+/* 雷达扫描环：呼应产品主题 */
+.auth-page::after {
+  content: '';
+  position: absolute;
+  right: -180px;
+  top: 50%;
+  width: 640px;
+  height: 640px;
+  margin-top: -320px;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.1) 0 1px, transparent 1px 72px),
+    conic-gradient(from 0deg, rgba(116, 199, 199, 0.28), transparent 70deg, transparent 360deg);
+  animation: auth-radar 14s linear infinite;
+}
+
+@keyframes auth-drift {
+  from {
+    transform: translate3d(-2%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 3%, 0) scale(1.06);
+  }
+}
+
+@keyframes auth-radar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: 420px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 36px 32px 28px;
+  box-shadow: 0 24px 64px rgba(5, 35, 46, 0.45);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.auth-brand h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.auth-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--radar-brand);
+  color: #fff;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-submit {
+  width: 100%;
+}
+
+.auth-hint {
+  text-align: center;
+  margin-top: 18px;
+}

@@ -22,6 +22,7 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS radar_users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(50) NOT NULL DEFAULT '',
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(100) NOT NULL,
     role VARCHAR(32) NOT NULL DEFAULT 'subscriber',
@@ -34,6 +35,13 @@ CREATE TABLE IF NOT EXISTS radar_users (
     last_login_at TIMESTAMP
 )
 """
+
+# 幂等迁移：旧表补充 username 列与大小写不敏感唯一索引
+_MIGRATIONS = [
+    "ALTER TABLE radar_users ADD COLUMN IF NOT EXISTS username VARCHAR(50) NOT NULL DEFAULT ''",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_radar_users_username "
+    "ON radar_users (LOWER(username)) WHERE username <> ''",
+]
 
 _engine: Optional[Engine] = None
 _available: Optional[bool] = None
@@ -54,6 +62,8 @@ def available() -> bool:
         try:
             with _get_engine().begin() as conn:
                 conn.execute(text(_SCHEMA))
+                for migration in _MIGRATIONS:
+                    conn.execute(text(migration))
             _available = True
             logger.info("雷达用户库已连接（radar_users 表就绪）")
         except Exception as exc:
@@ -68,6 +78,7 @@ def _row_to_user(row: Any) -> Dict[str, Any]:
     return {
         "id": f"u_{row.id}",
         "name": row.name,
+        "username": row.username,
         "email": row.email,
         "phone": "",
         "role": row.role,
@@ -84,12 +95,15 @@ def count_users() -> int:
         return conn.execute(text("SELECT COUNT(*) FROM radar_users")).scalar_one()
 
 
-def get_user(email: str) -> Optional[Dict[str, Any]]:
-    """返回 {user, password_hash, subscription}，不存在返回 None。"""
+def get_user(account: str) -> Optional[Dict[str, Any]]:
+    """按邮箱或用户名（均大小写不敏感）查找，返回 {user, password_hash, subscription}，不存在返回 None。"""
     with _get_engine().begin() as conn:
         row = conn.execute(
-            text("SELECT * FROM radar_users WHERE email = :email"),
-            {"email": email},
+            text(
+                "SELECT * FROM radar_users "
+                "WHERE email = :account OR (username <> '' AND LOWER(username) = :account)"
+            ),
+            {"account": account.strip().lower()},
         ).fetchone()
     if not row:
         return None
@@ -102,6 +116,7 @@ def get_user(email: str) -> Optional[Dict[str, Any]]:
 
 def create_user(
     email: str,
+    username: str,
     password_hash: str,
     name: str,
     role: str,
@@ -115,16 +130,17 @@ def create_user(
             text(
                 """
                 INSERT INTO radar_users
-                    (email, password_hash, name, role, role_label, plan_id,
+                    (email, username, password_hash, name, role, role_label, plan_id,
                      risk_confirmed, risk_version, subscription, last_login_at)
                 VALUES
-                    (:email, :password_hash, :name, :role, :role_label, :plan_id,
+                    (:email, :username, :password_hash, :name, :role, :role_label, :plan_id,
                      :risk_confirmed, :risk_version, CAST(:subscription AS JSONB), NOW())
                 RETURNING *
                 """
             ),
             {
                 "email": email,
+                "username": username,
                 "password_hash": password_hash,
                 "name": name,
                 "role": role,

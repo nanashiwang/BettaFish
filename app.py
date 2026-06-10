@@ -15,7 +15,7 @@ import time
 import threading
 from datetime import datetime
 from queue import Queue
-from flask import Flask, render_template, request, jsonify, Response, redirect, session
+from flask import Flask, render_template, request, jsonify, Response, session, send_from_directory
 from flask_socketio import SocketIO, emit
 import atexit
 import requests
@@ -957,19 +957,6 @@ RADAR_SESSION_USER_KEY = 'radar_user'
 RADAR_SESSION_SUBSCRIPTION_KEY = 'radar_subscription'
 
 
-def _safe_radar_next(next_url):
-    """只允许跳回本应用内部雷达路径，避免开放重定向。"""
-    if not next_url or not isinstance(next_url, str):
-        return '/radar'
-    if next_url.startswith('//') or '://' in next_url:
-        return '/radar'
-    if not next_url.startswith('/radar'):
-        return '/radar'
-    if next_url.startswith('/radar/login'):
-        return '/radar'
-    return next_url
-
-
 def _radar_current_session_user():
     user = session.get(RADAR_SESSION_USER_KEY)
     return user if isinstance(user, dict) else None
@@ -1035,44 +1022,10 @@ def console():
     return render_template('console.html')
 
 @app.route('/radar')
-def sentiment_radar():
-    """A 股舆情雷达极简预判版。"""
-    if not _radar_logged_in():
-        return redirect('/radar/login?next=/radar')
-    return render_template('sentiment_radar.html')
-
-@app.route('/radar/login')
-def sentiment_radar_login():
-    """A 股舆情雷达登录与风险确认。"""
-    next_url = _safe_radar_next(request.args.get('next') or '/radar')
-    login_account = 'ops@radar.cn' if next_url.startswith('/radar/admin') else 'user@example.com'
-    return render_template(
-        'radar_platform.html',
-        initial_mode='login',
-        next_url=next_url,
-        login_account=login_account,
-    )
-
-@app.route('/radar/subscription')
-def sentiment_radar_subscription():
-    """A 股舆情雷达订阅中心。"""
-    return render_template('radar_platform.html', initial_mode='subscription')
-
-@app.route('/radar/account')
-def sentiment_radar_account():
-    """A 股舆情雷达个人账户。"""
-    if not _radar_logged_in():
-        return redirect('/radar/login?next=/radar/account')
-    return render_template('radar_platform.html', initial_mode='account')
-
-@app.route('/radar/admin')
-def sentiment_radar_admin():
-    """A 股舆情雷达管理后台。"""
-    if not _radar_logged_in():
-        return redirect('/radar/login?next=/radar/admin')
-    if not _radar_is_admin():
-        return Response('无管理员权限，请使用管理员账号登录。', status=403, mimetype='text/plain')
-    return render_template('radar_platform.html', initial_mode='admin')
+@app.route('/radar/<path:subpath>')
+def radar_spa(subpath=''):
+    """A 股舆情雷达 SPA 入口：登录守卫与页面路由由前端接管，数据安全由 API 401/403 兜底。"""
+    return send_from_directory(os.path.join(app.static_folder, 'radar'), 'index.html')
 
 @app.route('/api/radar/today')
 def api_radar_today():
@@ -1164,6 +1117,9 @@ def api_auth_risk_confirmation():
 @app.route('/api/account/plans')
 def api_account_plans():
     """返回可订阅套餐。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
     return jsonify(get_radar_plans())
 
 @app.route('/api/account/subscribe', methods=['POST'])

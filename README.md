@@ -439,6 +439,24 @@ python app.py
 
 访问 http://localhost:5000 即可使用完整系统
 
+#### 6.1.1 舆情雷达用户前端（Vue 3 SPA）
+
+舆情雷达平台（`/radar`，含登录、今日预判、订阅、账户、管理后台）的前端位于 `SentimentRadar/frontend/`，基于 Vue 3 + Vite + Element Plus，构建产物输出到 `static/radar/` 由 Flask 托管：
+
+```bash
+cd SentimentRadar/frontend
+npm install
+npm run build    # 产物输出到 static/radar/，随后启动 Flask 访问 http://localhost:5000/radar
+```
+
+前端开发模式（热更新，需 Flask 同时运行）：
+
+```bash
+npm run dev      # Vite dev server（5173 端口），/api 请求自动代理到 Flask 5000 端口
+```
+
+> 登录后才能使用全部功能；管理后台仅管理员账号（如 ops@radar.cn）可见。
+
 #### 6.2 单独启动某个Agent
 
 ```bash

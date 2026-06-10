@@ -1,0 +1,30 @@
+:root {
+  --radar-brand: #176b87;
+  --radar-bg: #f4f7f9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--radar-bg);
+  color: #1f2d3d;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.muted {
+  color: #8492a6;
+  font-size: 13px;
+}

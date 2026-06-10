@@ -1142,7 +1142,8 @@ def api_account_subscribe():
     if auth_error:
         return auth_error
     payload = request.get_json(silent=True) or {}
-    result = subscribe_radar_plan(payload)
+    current_user = _radar_current_session_user() or {}
+    result = subscribe_radar_plan(payload, current_user.get('email'))
     if result.get('success'):
         session[RADAR_SESSION_SUBSCRIPTION_KEY] = result.get('subscription', {})
     return jsonify(result)

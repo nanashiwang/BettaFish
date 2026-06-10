@@ -8,7 +8,11 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from SentimentRadar import user_store
 
 
 def _timestamp() -> str:
@@ -33,7 +37,7 @@ CURRENT_USER = {
 }
 
 
-# 原型内存注册用户表：键为小写邮箱，密码与用户资料分开存放，避免随 user 返回前端。
+# 数据库不可用时的内存降级存储：键为小写邮箱，密码哈希与用户资料分开存放。
 REGISTERED_USERS: Dict[str, Dict[str, Any]] = {}
 
 # 演示管理员白名单：仅这些账号经原型任意登录可获得管理员身份。
@@ -272,17 +276,56 @@ def get_current_user() -> Dict[str, Any]:
     }
 
 
+def _new_free_subscription() -> Dict[str, Any]:
+    subscription = deepcopy(FREE_SUBSCRIPTION)
+    subscription["started_at"] = datetime.now().strftime("%Y-%m-%d")
+    return subscription
+
+
+def _auth_success(user: Dict[str, Any], subscription: Dict[str, Any], message: str) -> Dict[str, Any]:
+    return {
+        "success": True,
+        "message": message,
+        "token": "mock-radar-session-token",
+        "user": user,
+        "subscription": subscription,
+    }
+
+
 def register(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """原型注册：写入内存用户表，新用户默认免费版套餐。"""
+    """注册：优先写入 PostgreSQL（radar_users 表），数据库不可用时降级为内存存储。"""
     email = str(payload.get("email") or "").strip().lower()
     password = str(payload.get("password") or "")
     if "@" not in email:
         return {"success": False, "message": "请输入有效邮箱"}
     if len(password) < 6:
         return {"success": False, "message": "密码至少 6 位"}
-    if email in REGISTERED_USERS or email == CURRENT_USER["email"]:
+    if email == CURRENT_USER["email"]:
         return {"success": False, "message": "该邮箱已注册，请直接登录"}
 
+    risk_confirmed = bool(payload.get("risk_confirmed", True))
+    subscription = _new_free_subscription()
+
+    if user_store.available():
+        if user_store.get_user(email):
+            return {"success": False, "message": "该邮箱已注册，请直接登录"}
+        # 首个注册用户自动成为超级管理员，便于自部署后接管后台。
+        is_first = user_store.count_users() == 0
+        user = user_store.create_user(
+            email=email,
+            password_hash=generate_password_hash(password),
+            name=email.split("@")[0],
+            role="super_admin" if is_first else "subscriber",
+            role_label="超级管理员" if is_first else "订阅用户",
+            risk_confirmed=risk_confirmed,
+            risk_version="v2026.06",
+            subscription=subscription,
+        )
+        return _auth_success(user, subscription, "注册成功")
+
+    # ---- 内存降级 ----
+    if email in REGISTERED_USERS:
+        return {"success": False, "message": "该邮箱已注册，请直接登录"}
     user = deepcopy(CURRENT_USER)
     user.update({
         "id": f"u_{10100 + len(REGISTERED_USERS)}",
@@ -290,44 +333,50 @@ def register(payload: Dict[str, Any]) -> Dict[str, Any]:
         "email": email,
         "phone": "",
         "plan_id": "free",
-        "risk_confirmed": bool(payload.get("risk_confirmed", True)),
+        "risk_confirmed": risk_confirmed,
         "risk_version": "v2026.06",
         "last_login_at": _timestamp(),
     })
-    # 首个注册用户自动成为超级管理员，便于自部署后接管后台。
     if not REGISTERED_USERS:
         user["role"] = "super_admin"
         user["role_label"] = "超级管理员"
-    subscription = deepcopy(FREE_SUBSCRIPTION)
-    subscription["started_at"] = datetime.now().strftime("%Y-%m-%d")
-    REGISTERED_USERS[email] = {"user": user, "password": password, "subscription": subscription}
-    return {
-        "success": True,
-        "message": "注册成功（原型模式）",
-        "token": "mock-radar-session-token",
-        "user": deepcopy(user),
-        "subscription": deepcopy(subscription),
+    REGISTERED_USERS[email] = {
+        "user": user,
+        "password_hash": generate_password_hash(password),
+        "subscription": subscription,
     }
+    return _auth_success(deepcopy(user), deepcopy(subscription), "注册成功（内存模式，重启后失效）")
 
 
 def login(payload: Dict[str, Any]) -> Dict[str, Any]:
     account = payload.get("account") or payload.get("email") or CURRENT_USER["email"]
     confirmed = bool(payload.get("risk_confirmed", True))
+    account_text = str(account).strip().lower()
+    password = str(payload.get("password") or payload.get("code") or "")
 
-    # 已注册账号：校验密码；未注册账号走下方原型任意登录（保留演示账号行为）。
-    registered = REGISTERED_USERS.get(str(account).strip().lower())
-    if registered:
-        if str(payload.get("password") or payload.get("code") or "") != registered["password"]:
-            return {"success": False, "message": "账号或密码错误"}
-        registered["user"]["risk_confirmed"] = confirmed
-        registered["user"]["last_login_at"] = _timestamp()
-        return {
-            "success": True,
-            "message": "登录成功（原型模式）",
-            "token": "mock-radar-session-token",
-            "user": deepcopy(registered["user"]),
-            "subscription": deepcopy(registered["subscription"]),
-        }
+    # 已注册账号：校验密码哈希；未注册账号走下方原型任意登录（保留演示账号行为）。
+    if user_store.available():
+        stored = user_store.get_user(account_text)
+        if stored:
+            if not check_password_hash(stored["password_hash"], password):
+                return {"success": False, "message": "账号或密码错误"}
+            user_store.touch_login(account_text, confirmed)
+            user = stored["user"]
+            user["risk_confirmed"] = confirmed
+            user["last_login_at"] = _timestamp()
+            return _auth_success(user, stored["subscription"] or _new_free_subscription(), "登录成功")
+    else:
+        registered = REGISTERED_USERS.get(account_text)
+        if registered:
+            if not check_password_hash(registered["password_hash"], password):
+                return {"success": False, "message": "账号或密码错误"}
+            registered["user"]["risk_confirmed"] = confirmed
+            registered["user"]["last_login_at"] = _timestamp()
+            return _auth_success(
+                deepcopy(registered["user"]),
+                deepcopy(registered["subscription"]),
+                "登录成功（内存模式）",
+            )
 
     user = deepcopy(CURRENT_USER)
     user["email"] = account if "@" in str(account) else CURRENT_USER["email"]
@@ -337,7 +386,6 @@ def login(payload: Dict[str, Any]) -> Dict[str, Any]:
     subscription = deepcopy(SUBSCRIPTION)
 
     # 演示管理员仅限白名单账号，避免任意含 admin 字样的账号被提权。
-    account_text = str(account).lower()
     if account_text in DEMO_ADMIN_ACCOUNTS:
         user["role"] = "admin"
         user["role_label"] = "管理员"
@@ -379,21 +427,32 @@ def get_plans() -> Dict[str, Any]:
     }
 
 
-def subscribe(payload: Dict[str, Any]) -> Dict[str, Any]:
+def subscribe(payload: Dict[str, Any], account: Optional[str] = None) -> Dict[str, Any]:
     plan_id = payload.get("plan_id", "standard")
     plan = next((item for item in PLANS if item["id"] == plan_id), PLANS[1])
-    SUBSCRIPTION.update({
+    subscription = {
         "plan_id": plan["id"],
         "plan_name": plan["name"],
         "status": "active",
+        "renewal": False,
         "started_at": datetime.now().strftime("%Y-%m-%d"),
         "expires_at": _date_after(30),
-    })
-    return {
-        "success": True,
-        "message": f"已切换为 {plan['name']}（原型模式，未发起真实支付）",
-        "subscription": deepcopy(SUBSCRIPTION),
     }
+    message = f"已切换为 {plan['name']}（原型模式，未发起真实支付）"
+
+    # 注册用户：持久化到自己的记录；演示账号：更新全局 Mock。
+    account_text = str(account or "").strip().lower()
+    if account_text:
+        if user_store.available():
+            if user_store.update_subscription(account_text, subscription):
+                return {"success": True, "message": message, "subscription": subscription}
+        elif account_text in REGISTERED_USERS:
+            REGISTERED_USERS[account_text]["subscription"] = subscription
+            REGISTERED_USERS[account_text]["user"]["plan_id"] = plan["id"]
+            return {"success": True, "message": message, "subscription": deepcopy(subscription)}
+
+    SUBSCRIPTION.update(subscription)
+    return {"success": True, "message": message, "subscription": deepcopy(SUBSCRIPTION)}
 
 
 def get_subscription() -> Dict[str, Any]:

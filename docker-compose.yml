@@ -13,6 +13,10 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - STREAMLIT_SERVER_ENABLE_FILE_WATCHER=false
+      # 雷达注册用户库（容器内走 compose 网络访问 db 服务）
+      - RADAR_DB_URL=postgresql+psycopg://${POSTGRES_USER:-bettafish}:${POSTGRES_PASSWORD:-bettafish}@db:5432/${POSTGRES_DB:-bettafish}
+    depends_on:
+      - db
     ports:
       # 宿主机 5000 被 macOS 隔空播放（AirPlay）占用，改用 5050 访问
       - "5050:5000"

@@ -1023,6 +1023,7 @@ def console():
     return render_template('console.html')
 
 @app.route('/radar')
+@app.route('/radar/')
 @app.route('/radar/<path:subpath>')
 def radar_spa(subpath=''):
     """A 股舆情雷达 SPA 入口：登录守卫与页面路由由前端接管，数据安全由 API 401/403 兜底。"""

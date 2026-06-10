@@ -257,3 +257,21 @@ export interface AuditLog {
   action: string
   target: string
 }
+
+// ---------- 雷达管线 ----------
+export interface RadarPipelineConfig {
+  enabled: boolean
+  run_times: string[]
+  llm_model: string
+  tushare_token: string
+}
+
+export interface RadarPipelineRun {
+  id: number
+  started_at: string
+  finished_at: string | null
+  status: 'running' | 'success' | 'failed' | string
+  stage: string
+  message: string
+  stats: Record<string, unknown>
+}

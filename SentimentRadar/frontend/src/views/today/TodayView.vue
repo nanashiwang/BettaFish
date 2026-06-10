@@ -3,7 +3,7 @@
     <el-tabs v-model="activeTab">
       <el-tab-pane label="今日预判" name="today">
         <div v-if="todayLoading" v-loading="true" class="loading-block" />
-        <template v-else-if="today">
+        <template v-else-if="today && today.cards.length">
           <section class="hero">
             <div class="hero-head">
               <div>
@@ -28,6 +28,12 @@
             :evidence-overview="today.evidence_overview"
           />
         </template>
+        <el-empty v-else :description="today?.headline || '暂无预判数据'">
+          <p class="muted empty-hint">
+            管线尚未产出今日信号。管理员可在「管理后台 → 平台设置 → 雷达管线」中配置并立即运行。
+          </p>
+          <el-button type="primary" :loading="refreshing" @click="loadToday(true)">刷新</el-button>
+        </el-empty>
       </el-tab-pane>
 
       <el-tab-pane label="我的关注" name="my" lazy>
@@ -107,5 +113,9 @@ onMounted(() => loadToday())
 
 .cards-row {
   margin-bottom: 16px;
+}
+
+.empty-hint {
+  margin: 0 0 16px;
 }
 </style>

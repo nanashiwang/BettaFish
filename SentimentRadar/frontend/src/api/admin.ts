@@ -8,6 +8,8 @@ import type {
   ApiResult,
   AuditLog,
   Plan,
+  RadarPipelineConfig,
+  RadarPipelineRun,
 } from './types'
 
 export function fetchOverview() {
@@ -50,4 +52,26 @@ export function updateAdminSettings(payload: Partial<AdminSettings>) {
 
 export function fetchAuditLogs() {
   return http.get<ApiResult & { logs: AuditLog[] }>('/admin/audit-logs').then((res) => res.data)
+}
+
+export function fetchRadarConfig() {
+  return http
+    .get<ApiResult & { config: RadarPipelineConfig }>('/admin/radar/config')
+    .then((res) => res.data)
+}
+
+export function updateRadarConfig(payload: Partial<RadarPipelineConfig>) {
+  return http
+    .patch<ApiResult & { config: RadarPipelineConfig }>('/admin/radar/config', payload)
+    .then((res) => res.data)
+}
+
+export function runRadarPipeline() {
+  return http.post<ApiResult>('/admin/radar/run').then((res) => res.data)
+}
+
+export function fetchRadarRuns() {
+  return http
+    .get<ApiResult & { runs: RadarPipelineRun[] }>('/admin/radar/runs')
+    .then((res) => res.data)
 }

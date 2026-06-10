@@ -1,75 +1,19 @@
 """雷达注册用户的 PostgreSQL 持久化存储。
 
-依赖 docker-compose 中的 bettafish-db 服务；连接串通过 RADAR_DB_URL 环境变量配置，
-默认指向宿主机映射端口（本地开发），容器内由 compose 注入指向 db 服务。
-数据库不可用时由调用方（platform_service）降级为内存存储。
+连接与建表统一由 SentimentRadar.db 管理；数据库不可用时由调用方
+（platform_service）降级为内存存储。
 """
 
 from __future__ import annotations
 
 import json
-import os
-from datetime import datetime
 from typing import Any, Dict, Optional
 
-from loguru import logger
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
+from sqlalchemy import text
 
-DEFAULT_DB_URL = "postgresql+psycopg://bettafish:bettafish@127.0.0.1:5444/bettafish"
+from SentimentRadar.db import available, get_engine
 
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS radar_users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    username VARCHAR(50) NOT NULL DEFAULT '',
-    password_hash VARCHAR(255) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    role VARCHAR(32) NOT NULL DEFAULT 'subscriber',
-    role_label VARCHAR(32) NOT NULL DEFAULT '订阅用户',
-    plan_id VARCHAR(32) NOT NULL DEFAULT 'free',
-    risk_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
-    risk_version VARCHAR(32) NOT NULL DEFAULT '',
-    subscription JSONB,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    last_login_at TIMESTAMP
-)
-"""
-
-# 幂等迁移：旧表补充 username 列与大小写不敏感唯一索引
-_MIGRATIONS = [
-    "ALTER TABLE radar_users ADD COLUMN IF NOT EXISTS username VARCHAR(50) NOT NULL DEFAULT ''",
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_radar_users_username "
-    "ON radar_users (LOWER(username)) WHERE username <> ''",
-]
-
-_engine: Optional[Engine] = None
-_available: Optional[bool] = None
-
-
-def _get_engine() -> Engine:
-    global _engine
-    if _engine is None:
-        url = os.getenv("RADAR_DB_URL", DEFAULT_DB_URL)
-        _engine = create_engine(url, future=True, pool_pre_ping=True)
-    return _engine
-
-
-def available() -> bool:
-    """惰性探测数据库可用性，进程内只探测一次。"""
-    global _available
-    if _available is None:
-        try:
-            with _get_engine().begin() as conn:
-                conn.execute(text(_SCHEMA))
-                for migration in _MIGRATIONS:
-                    conn.execute(text(migration))
-            _available = True
-            logger.info("雷达用户库已连接（radar_users 表就绪）")
-        except Exception as exc:
-            _available = False
-            logger.warning(f"雷达用户库不可用，注册用户将使用内存存储: {exc}")
-    return _available
+__all__ = ["available", "count_users", "get_user", "create_user", "touch_login", "update_subscription"]
 
 
 def _row_to_user(row: Any) -> Dict[str, Any]:
@@ -91,13 +35,13 @@ def _row_to_user(row: Any) -> Dict[str, Any]:
 
 
 def count_users() -> int:
-    with _get_engine().begin() as conn:
+    with get_engine().begin() as conn:
         return conn.execute(text("SELECT COUNT(*) FROM radar_users")).scalar_one()
 
 
 def get_user(account: str) -> Optional[Dict[str, Any]]:
     """按邮箱或用户名（均大小写不敏感）查找，返回 {user, password_hash, subscription}，不存在返回 None。"""
-    with _get_engine().begin() as conn:
+    with get_engine().begin() as conn:
         row = conn.execute(
             text(
                 "SELECT * FROM radar_users "
@@ -125,7 +69,7 @@ def create_user(
     risk_version: str,
     subscription: Dict[str, Any],
 ) -> Dict[str, Any]:
-    with _get_engine().begin() as conn:
+    with get_engine().begin() as conn:
         row = conn.execute(
             text(
                 """
@@ -155,7 +99,7 @@ def create_user(
 
 
 def touch_login(email: str, risk_confirmed: bool) -> None:
-    with _get_engine().begin() as conn:
+    with get_engine().begin() as conn:
         conn.execute(
             text(
                 "UPDATE radar_users SET last_login_at = NOW(), risk_confirmed = :confirmed "
@@ -167,7 +111,7 @@ def touch_login(email: str, risk_confirmed: bool) -> None:
 
 def update_subscription(email: str, subscription: Dict[str, Any]) -> bool:
     """更新注册用户的订阅信息；账号未注册返回 False。"""
-    with _get_engine().begin() as conn:
+    with get_engine().begin() as conn:
         result = conn.execute(
             text(
                 "UPDATE radar_users SET subscription = CAST(:subscription AS JSONB), plan_id = :plan_id "

@@ -13,6 +13,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - STREAMLIT_SERVER_ENABLE_FILE_WATCHER=false
+      # 交易日与调度时间按北京时间计算
+      - TZ=Asia/Shanghai
       # 雷达注册用户库（容器内走 compose 网络访问 db 服务）
       - RADAR_DB_URL=postgresql+psycopg://${POSTGRES_USER:-bettafish}:${POSTGRES_PASSWORD:-bettafish}@db:5432/${POSTGRES_DB:-bettafish}
     depends_on:

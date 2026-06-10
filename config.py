@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     HOST: str = Field("0.0.0.0", description="BETTAFISH 主机地址，例如 0.0.0.0 或 127.0.0.1")
     PORT: int = Field(5000, description="Flask服务器端口号，默认5000")
 
+    # ============== 通用 OpenAI 协议中转（舆情雷达管线 LLM） ==============
+    OPENAI_API_KEY: Optional[str] = Field(None, description="OpenAI 协议 API 密钥（雷达管线使用）")
+    OPENAI_BASE_URL: Optional[str] = Field(None, description="OpenAI 协议 Base URL（中转地址）")
+
     # ====================== 数据库配置 ======================
     DB_DIALECT: str = Field("postgresql", description="数据库类型，可选 mysql 或 postgresql；请与其他连接信息同时配置")
     DB_HOST: str = Field("your_db_host", description="数据库主机，例如localhost 或 127.0.0.1")

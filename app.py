@@ -1249,6 +1249,47 @@ def api_admin_audit_logs():
         return auth_error
     return jsonify(get_radar_audit_logs())
 
+@app.route('/api/admin/radar/config', methods=['GET', 'PATCH'])
+def api_admin_radar_config():
+    """读取或更新雷达管线配置（tushare token 返回时打码）。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    from SentimentRadar.pipeline import config_store
+    if request.method == 'PATCH':
+        payload = request.get_json(silent=True) or {}
+        # 前端提交打码占位值时不覆盖真实 token
+        if payload.get('tushare_token') == '******':
+            payload.pop('tushare_token')
+        config = config_store.update_config(payload)
+    else:
+        config = config_store.get_config()
+    masked = dict(config)
+    if masked.get('tushare_token'):
+        masked['tushare_token'] = '******'
+    return jsonify({'success': True, 'config': masked})
+
+@app.route('/api/admin/radar/run', methods=['POST'])
+def api_admin_radar_run():
+    """手动触发雷达管线（后台异步执行）。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    from SentimentRadar.pipeline import runner as radar_runner
+    if radar_runner.is_running():
+        return jsonify({'success': False, 'message': '管线已在运行中，请稍后查看运行记录'})
+    threading.Thread(target=radar_runner.run_pipeline, daemon=True).start()
+    return jsonify({'success': True, 'message': '管线已启动，请在运行记录中查看进度'})
+
+@app.route('/api/admin/radar/runs')
+def api_admin_radar_runs():
+    """返回雷达管线最近运行记录。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    from SentimentRadar.pipeline import runner as radar_runner
+    return jsonify({'success': True, 'runs': radar_runner.list_runs()})
+
 @app.route('/api/status')
 def get_status():
     """获取所有应用状态"""
@@ -1653,7 +1694,11 @@ if __name__ == '__main__':
     from config import settings
     HOST = settings.HOST
     PORT = settings.PORT
-    
+
+    # 启动雷达管线调度线程（按后台配置的时间自动运行）
+    from SentimentRadar.pipeline import scheduler as radar_scheduler
+    radar_scheduler.start()
+
     logger.info("等待配置确认，系统将在前端指令后启动组件...")
     logger.info(f"Flask服务器已启动，访问地址: http://{HOST}:{PORT}")
     

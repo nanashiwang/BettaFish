@@ -36,6 +36,9 @@ CURRENT_USER = {
 # 原型内存注册用户表：键为小写邮箱，密码与用户资料分开存放，避免随 user 返回前端。
 REGISTERED_USERS: Dict[str, Dict[str, Any]] = {}
 
+# 演示管理员白名单：仅这些账号经原型任意登录可获得管理员身份。
+DEMO_ADMIN_ACCOUNTS = {"ops@radar.cn"}
+
 
 FREE_SUBSCRIPTION = {
     "plan_id": "free",
@@ -291,6 +294,10 @@ def register(payload: Dict[str, Any]) -> Dict[str, Any]:
         "risk_version": "v2026.06",
         "last_login_at": _timestamp(),
     })
+    # 首个注册用户自动成为超级管理员，便于自部署后接管后台。
+    if not REGISTERED_USERS:
+        user["role"] = "super_admin"
+        user["role_label"] = "超级管理员"
     subscription = deepcopy(FREE_SUBSCRIPTION)
     subscription["started_at"] = datetime.now().strftime("%Y-%m-%d")
     REGISTERED_USERS[email] = {"user": user, "password": password, "subscription": subscription}
@@ -329,9 +336,9 @@ def login(payload: Dict[str, Any]) -> Dict[str, Any]:
     user["last_login_at"] = _timestamp()
     subscription = deepcopy(SUBSCRIPTION)
 
-    # 原型阶段用账号区分普通用户和管理员，后续替换为正式 RBAC。
+    # 演示管理员仅限白名单账号，避免任意含 admin 字样的账号被提权。
     account_text = str(account).lower()
-    if "ops" in account_text or "admin" in account_text:
+    if account_text in DEMO_ADMIN_ACCOUNTS:
         user["role"] = "admin"
         user["role_label"] = "管理员"
         user["plan_id"] = "internal"

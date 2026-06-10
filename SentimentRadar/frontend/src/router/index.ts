@@ -5,9 +5,21 @@ const router = createRouter({
   history: createWebHistory('/radar/'),
   routes: [
     {
+      path: '/',
+      name: 'home',
+      component: () => import('../views/HomeView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/RegisterView.vue'),
       meta: { public: true },
     },
     {
@@ -16,7 +28,7 @@ const router = createRouter({
       meta: { requiresAuth: true },
       children: [
         {
-          path: '',
+          path: 'today',
           name: 'today',
           component: () => import('../views/today/TodayView.vue'),
         },

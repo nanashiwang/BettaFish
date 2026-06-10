@@ -31,7 +31,13 @@ export interface Subscription {
 
 export interface LoginPayload {
   account: string
-  code: string
+  password: string
+  risk_confirmed: boolean
+}
+
+export interface RegisterPayload {
+  email: string
+  password: string
   risk_confirmed: boolean
 }
 

@@ -45,6 +45,7 @@ from SentimentRadar.platform_service import (
     get_usage as get_radar_usage,
     list_admin_users as list_radar_admin_users,
     login as login_radar_user,
+    register as register_radar_user,
     subscribe as subscribe_radar_plan,
     update_admin_plan as update_radar_admin_plan,
     update_admin_settings as update_radar_admin_settings,
@@ -1071,6 +1072,18 @@ def api_auth_login():
     if not payload.get('risk_confirmed'):
         return jsonify({'success': False, 'message': '请先确认风险声明'}), 400
     result = login_radar_user(payload)
+    if result.get('success'):
+        session[RADAR_SESSION_USER_KEY] = result.get('user', {})
+        session[RADAR_SESSION_SUBSCRIPTION_KEY] = result.get('subscription', {})
+    return jsonify(result)
+
+@app.route('/api/auth/register', methods=['POST'])
+def api_auth_register():
+    """原型注册接口：写入内存用户表，成功后写 session 实现自动登录。"""
+    payload = request.get_json(silent=True) or {}
+    if not payload.get('risk_confirmed'):
+        return jsonify({'success': False, 'message': '请先确认风险声明'}), 400
+    result = register_radar_user(payload)
     if result.get('success'):
         session[RADAR_SESSION_USER_KEY] = result.get('user', {})
         session[RADAR_SESSION_SUBSCRIPTION_KEY] = result.get('subscription', {})

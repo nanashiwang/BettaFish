@@ -19,7 +19,7 @@
 
     <el-container>
       <el-header class="admin-topbar">
-        <el-button text @click="$router.push('/')">← 返回用户端</el-button>
+        <el-button text @click="$router.push('/today')">← 返回用户端</el-button>
         <div class="spacer" />
         <span class="muted">{{ auth.user?.name }}（{{ auth.user?.role_label }}）</span>
         <el-button text type="danger" @click="handleLogout">退出登录</el-button>
@@ -40,7 +40,8 @@ const router = useRouter()
 
 async function handleLogout() {
   await auth.logout()
-  router.replace('/login')
+  // 退出后回公开首页
+  router.replace('/')
 }
 </script>
 

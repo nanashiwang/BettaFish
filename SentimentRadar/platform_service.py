@@ -33,6 +33,20 @@ CURRENT_USER = {
 }
 
 
+# 原型内存注册用户表：键为小写邮箱，密码与用户资料分开存放，避免随 user 返回前端。
+REGISTERED_USERS: Dict[str, Dict[str, Any]] = {}
+
+
+FREE_SUBSCRIPTION = {
+    "plan_id": "free",
+    "plan_name": "免费版",
+    "status": "active",
+    "renewal": False,
+    "started_at": "",
+    "expires_at": "-",
+}
+
+
 PLANS = [
     {
         "id": "free",
@@ -255,9 +269,59 @@ def get_current_user() -> Dict[str, Any]:
     }
 
 
+def register(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """原型注册：写入内存用户表，新用户默认免费版套餐。"""
+    email = str(payload.get("email") or "").strip().lower()
+    password = str(payload.get("password") or "")
+    if "@" not in email:
+        return {"success": False, "message": "请输入有效邮箱"}
+    if len(password) < 6:
+        return {"success": False, "message": "密码至少 6 位"}
+    if email in REGISTERED_USERS or email == CURRENT_USER["email"]:
+        return {"success": False, "message": "该邮箱已注册，请直接登录"}
+
+    user = deepcopy(CURRENT_USER)
+    user.update({
+        "id": f"u_{10100 + len(REGISTERED_USERS)}",
+        "name": email.split("@")[0],
+        "email": email,
+        "phone": "",
+        "plan_id": "free",
+        "risk_confirmed": bool(payload.get("risk_confirmed", True)),
+        "risk_version": "v2026.06",
+        "last_login_at": _timestamp(),
+    })
+    subscription = deepcopy(FREE_SUBSCRIPTION)
+    subscription["started_at"] = datetime.now().strftime("%Y-%m-%d")
+    REGISTERED_USERS[email] = {"user": user, "password": password, "subscription": subscription}
+    return {
+        "success": True,
+        "message": "注册成功（原型模式）",
+        "token": "mock-radar-session-token",
+        "user": deepcopy(user),
+        "subscription": deepcopy(subscription),
+    }
+
+
 def login(payload: Dict[str, Any]) -> Dict[str, Any]:
     account = payload.get("account") or payload.get("email") or CURRENT_USER["email"]
     confirmed = bool(payload.get("risk_confirmed", True))
+
+    # 已注册账号：校验密码；未注册账号走下方原型任意登录（保留演示账号行为）。
+    registered = REGISTERED_USERS.get(str(account).strip().lower())
+    if registered:
+        if str(payload.get("password") or payload.get("code") or "") != registered["password"]:
+            return {"success": False, "message": "账号或密码错误"}
+        registered["user"]["risk_confirmed"] = confirmed
+        registered["user"]["last_login_at"] = _timestamp()
+        return {
+            "success": True,
+            "message": "登录成功（原型模式）",
+            "token": "mock-radar-session-token",
+            "user": deepcopy(registered["user"]),
+            "subscription": deepcopy(registered["subscription"]),
+        }
+
     user = deepcopy(CURRENT_USER)
     user["email"] = account if "@" in str(account) else CURRENT_USER["email"]
     user["phone"] = account if "@" not in str(account) else CURRENT_USER["phone"]

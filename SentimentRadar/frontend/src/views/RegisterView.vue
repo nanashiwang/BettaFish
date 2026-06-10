@@ -1,29 +1,33 @@
 <template>
-  <div class="login-page">
-    <div class="login-card">
+  <div class="register-page">
+    <div class="register-card">
       <div class="brand">
         <div class="logo">雷</div>
         <div>
-          <h1>A 股舆情雷达</h1>
+          <h1>注册 A 股舆情雷达</h1>
           <p class="muted">仅供舆情观察 · 不构成投资建议</p>
         </div>
       </div>
 
-      <el-form @submit.prevent="handleLogin">
-        <el-form-item label="账号">
-          <el-input
-            v-model="account"
-            placeholder="邮箱或手机号（演示：user@example.com / ops@radar.cn）"
-            size="large"
-            clearable
-          />
+      <el-form @submit.prevent="handleRegister">
+        <el-form-item label="邮箱">
+          <el-input v-model="email" placeholder="用于登录的邮箱地址" size="large" clearable />
         </el-form-item>
         <el-form-item label="密码">
           <el-input
             v-model="password"
             type="password"
             show-password
-            placeholder="演示账号任意密码；注册账号请输入注册密码"
+            placeholder="至少 6 位"
+            size="large"
+          />
+        </el-form-item>
+        <el-form-item label="确认密码">
+          <el-input
+            v-model="confirmPassword"
+            type="password"
+            show-password
+            placeholder="再次输入密码"
             size="large"
           />
         </el-form-item>
@@ -40,13 +44,13 @@
           :loading="loading"
           :disabled="!canSubmit"
         >
-          登录
+          注册并进入
         </el-button>
       </el-form>
 
       <p class="muted hint">
-        没有账号？
-        <router-link :to="{ path: '/register', query: route.query }">立即注册</router-link>
+        已有账号？
+        <router-link :to="{ path: '/login', query: route.query }">去登录</router-link>
       </p>
     </div>
   </div>
@@ -62,33 +66,38 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const account = ref('user@example.com')
+const email = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const riskConfirmed = ref(false)
 const loading = ref(false)
 
-const canSubmit = computed(() => account.value.trim() !== '' && password.value !== '' && riskConfirmed.value)
+const canSubmit = computed(
+  () =>
+    email.value.includes('@') &&
+    password.value.length >= 6 &&
+    password.value === confirmPassword.value &&
+    riskConfirmed.value,
+)
 
-// 兼容旧版 ?next= 参数
 function resolveRedirect(): string {
-  const redirect = route.query.redirect ?? route.query.next
+  const redirect = route.query.redirect
   if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
-    // 旧版 next 带 /radar 前缀，SPA 内部路由需去掉
-    return redirect.replace(/^\/radar/, '') || '/today'
+    return redirect
   }
   return '/today'
 }
 
-async function handleLogin() {
+async function handleRegister() {
   if (!canSubmit.value || loading.value) return
   loading.value = true
   try {
-    await auth.login({
-      account: account.value.trim(),
+    await auth.register({
+      email: email.value.trim(),
       password: password.value,
       risk_confirmed: riskConfirmed.value,
     })
-    ElMessage.success('登录成功')
+    ElMessage.success('注册成功，已自动登录')
     router.replace(resolveRedirect())
   } catch {
     // 错误提示由 http 拦截器统一处理
@@ -99,7 +108,7 @@ async function handleLogin() {
 </script>
 
 <style scoped>
-.login-page {
+.register-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -108,7 +117,7 @@ async function handleLogin() {
   padding: 20px;
 }
 
-.login-card {
+.register-card {
   width: 420px;
   background: #fff;
   border-radius: 16px;

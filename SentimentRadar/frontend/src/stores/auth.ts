@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import { fetchMe, login as apiLogin, logout as apiLogout } from '../api/auth'
+import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister } from '../api/auth'
 import { fetchSubscription } from '../api/account'
-import type { LoginPayload, RadarUser, Subscription } from '../api/types'
+import type { LoginPayload, RadarUser, RegisterPayload, Subscription } from '../api/types'
 
 interface AuthState {
   user: RadarUser | null
@@ -48,6 +48,14 @@ export const useAuthStore = defineStore('auth', {
 
     async login(payload: LoginPayload) {
       const result = await apiLogin(payload)
+      this.user = result.user
+      this.subscription = result.subscription
+      this.loaded = true
+      return result
+    },
+
+    async register(payload: RegisterPayload) {
+      const result = await apiRegister(payload)
       this.user = result.user
       this.subscription = result.subscription
       this.loaded = true

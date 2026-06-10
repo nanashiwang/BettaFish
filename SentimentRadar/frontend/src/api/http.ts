@@ -41,7 +41,7 @@ http.interceptors.response.use(
       ElMessage.error(error.response?.data?.message || '无访问权限')
       const { default: router } = await import('../router')
       if (router.currentRoute.value.path.startsWith('/admin')) {
-        router.replace('/')
+        router.replace('/today')
       }
     } else if (!silent) {
       ElMessage.error(error.response?.data?.message || '网络请求失败，请稍后重试')

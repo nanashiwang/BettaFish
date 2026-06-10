@@ -1,7 +1,7 @@
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <router-link to="/" class="brand">
+      <router-link to="/today" class="brand">
         <div class="logo">雷</div>
         <div>
           <div class="brand-title">A 股舆情雷达</div>
@@ -10,7 +10,7 @@
       </router-link>
 
       <nav class="nav">
-        <router-link to="/" exact-active-class="active">今日预判</router-link>
+        <router-link to="/today" active-class="active">今日预判</router-link>
         <router-link to="/subscription" active-class="active">订阅</router-link>
         <router-link to="/account" active-class="active">账户</router-link>
       </nav>
@@ -60,7 +60,8 @@ async function handleCommand(command: string) {
     router.push('/admin')
   } else if (command === 'logout') {
     await auth.logout()
-    router.replace('/login')
+    // 退出后回公开首页
+    router.replace('/')
   }
 }
 </script>

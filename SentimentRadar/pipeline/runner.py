@@ -83,7 +83,16 @@ def run_pipeline(trade_date: Optional[date] = None) -> Dict[str, Any]:
 
             # 3. 板块清单 + 映射
             quote_service = QuoteService(config.get("tushare_token", ""))
-            boards = quote_service.list_boards()
+            try:
+                boards = quote_service.list_boards()
+            except Exception as exc:
+                hint = (
+                    "（未配置 tushare token；akshare 兜底在当前网络不可达。"
+                    "请在后台「平台设置 → 雷达管线」填写 tushare token 后重试）"
+                    if not config.get("tushare_token")
+                    else "（tushare 与 akshare 均失败，请检查 token 积分与网络）"
+                )
+                raise RuntimeError(f"获取板块清单失败{hint}: {exc}")
             stats["board_universe"] = len(boards)
             stats["quote_provider"] = quote_service.used_provider
             topics = topic_extractor.map_boards(topics, boards, model)

@@ -9,8 +9,8 @@ const props = defineProps<{ data: number[] }>()
 
 // A 股惯例：区间收涨为红、收跌为绿
 const trendColor = computed(() => {
-  if (props.data.length < 2) return '#5b6b85'
-  return props.data[props.data.length - 1] >= props.data[0] ? '#f87171' : '#34d399'
+  if (props.data.length < 2) return '#64748B'
+  return props.data[props.data.length - 1] >= props.data[0] ? '#F05252' : '#31C48D'
 })
 
 const option = computed(() => ({

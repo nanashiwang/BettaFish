@@ -3,39 +3,47 @@
    ============================================================ */
 
 :root {
-  /* 底色层级 */
+  /* 用户指定色板 */
   --bg-page: #0a0f1a;
-  --bg-panel: #0e1525;
-  --bg-elevated: #131c30;
+  --bg-panel: #101826;
+  --bg-elevated: #151e2d;
+  --bg-hover: #1b2638;
+  --border: #2a3648;
 
-  /* 玻璃拟态 */
-  --glass-bg: rgba(255, 255, 255, 0.045);
-  --glass-bg-hover: rgba(255, 255, 255, 0.07);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.12);
+  /* 卡片层级 */
+  --glass-bg: #151e2d;
+  --glass-bg-hover: #1b2638;
+  --glass-border: #2a3648;
+  --glass-highlight: rgba(241, 245, 249, 0.08);
 
   /* 品牌与强调 */
-  --brand: #2dd4bf;
-  --brand-dim: rgba(45, 212, 191, 0.16);
-  --accent: #818cf8;
-  --accent-dim: rgba(129, 140, 248, 0.16);
+  --brand: #3ba4f7;
+  --brand-dim: rgba(59, 164, 247, 0.16);
+  --brand-secondary: #2dd4bf;
+  --brand-secondary-dim: rgba(45, 212, 191, 0.16);
+  --accent: #7c9cf5;
+  --accent-dim: rgba(124, 156, 245, 0.16);
 
   /* 涨跌（A 股惯例：红涨绿跌） */
-  --up: #f87171;
-  --down: #34d399;
+  --up: #f05252;
+  --down: #31c48d;
+  --warning: #fbbf24;
+  --risk: #fb923c;
+  --danger: #dc2626;
 
   /* 场景色 */
-  --scenario-news-first: #2dd4bf; /* 先闻后动：机会 */
-  --scenario-resonance: #818cf8;  /* 同步共振：确认 */
+  --scenario-news-first: #3ba4f7; /* 先闻后动：机会 */
+  --scenario-resonance: #2dd4bf;  /* 同步共振：确认 */
   --scenario-move-first: #fbbf24; /* 先动后闻：警惕 */
 
   /* 文本 */
-  --text-primary: #e7edf6;
-  --text-secondary: #93a3bc;
-  --text-faint: #5b6b85;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
 
   /* 兼容旧变量名 */
-  --radar-brand: #2dd4bf;
+  --radar-brand: #3ba4f7;
   --radar-bg: #0a0f1a;
 }
 
@@ -43,13 +51,18 @@
 html.dark {
   --el-bg-color: var(--bg-panel);
   --el-bg-color-overlay: var(--bg-elevated);
-  --el-fill-color-blank: transparent;
+  --el-fill-color: var(--bg-elevated);
+  --el-fill-color-light: var(--bg-hover);
+  --el-fill-color-blank: var(--bg-elevated);
   --el-border-color: var(--glass-border);
   --el-border-color-light: var(--glass-border);
-  --el-border-color-lighter: rgba(255, 255, 255, 0.06);
+  --el-border-color-lighter: var(--border);
   --el-color-primary: var(--brand);
   --el-text-color-primary: var(--text-primary);
   --el-text-color-regular: var(--text-secondary);
+  --el-text-color-secondary: var(--text-muted);
+  --el-mask-color: rgba(10, 15, 26, 0.72);
+  --el-disabled-bg-color: var(--bg-panel);
 }
 
 * {
@@ -59,8 +72,9 @@ html.dark {
 body {
   margin: 0;
   background:
-    radial-gradient(1100px 500px at 85% -10%, rgba(45, 212, 191, 0.07), transparent 60%),
-    radial-gradient(900px 500px at 0% 110%, rgba(129, 140, 248, 0.07), transparent 60%),
+    radial-gradient(900px 480px at 82% -12%, rgba(59, 164, 247, 0.13), transparent 62%),
+    radial-gradient(760px 420px at 0% 4%, rgba(45, 212, 191, 0.08), transparent 58%),
+    radial-gradient(620px 420px at 18% 108%, rgba(124, 156, 245, 0.08), transparent 62%),
     var(--bg-page);
   background-attachment: fixed;
   color: var(--text-primary);
@@ -72,13 +86,14 @@ body {
 }
 
 .page-container {
-  max-width: 1240px;
+  width: 100%;
+  max-width: 1420px;
   margin: 0 auto;
-  padding: 28px 20px 64px;
+  padding: 30px 22px 42px;
 }
 
 .muted {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -89,22 +104,20 @@ body {
 /* ---------- 通用：玻璃卡片 ---------- */
 .glass-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
+  border-radius: 12px;
   box-shadow:
     inset 0 1px 0 var(--glass-highlight),
-    0 8px 32px rgba(0, 0, 0, 0.35);
+    0 18px 42px rgba(0, 0, 0, 0.28);
   transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
 }
 
 .glass-card.hoverable:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   background: var(--glass-bg-hover);
   box-shadow:
     inset 0 1px 0 var(--glass-highlight),
-    0 16px 48px rgba(0, 0, 0, 0.5);
+    0 22px 52px rgba(0, 0, 0, 0.42);
 }
 
 /* ---------- 数字与涨跌 ---------- */
@@ -149,7 +162,7 @@ body {
   width: 3px;
   height: 16px;
   border-radius: 2px;
-  background: linear-gradient(180deg, var(--brand), var(--accent));
+  background: linear-gradient(180deg, var(--brand), var(--brand-secondary));
 }
 
 /* ---------- 入场动效 ---------- */

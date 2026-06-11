@@ -2,8 +2,8 @@
   <div v-if="loading" v-loading="true" class="loading-block" />
   <template v-else-if="data">
     <p class="muted head-line">更新于 {{ data.updated_at }} · {{ data.disclaimer }}</p>
-    <el-row v-if="data.hits.length" :gutter="16">
-      <el-col v-for="hit in data.hits" :key="hit.name" :xs="24" :md="8">
+    <el-row v-if="data.hits.length" :gutter="12">
+      <el-col v-for="hit in data.hits" :key="hit.name" :xs="24" :md="12">
         <div class="glass-card hoverable hit-card" :class="scenarioClass(hit.scenario)">
           <div class="hit-head">
             <h3>{{ hit.name }}</h3>
@@ -64,21 +64,23 @@ onMounted(async () => {
 }
 
 .hit-card {
-  padding: 18px 20px;
-  margin-bottom: 16px;
-  border-left: 3px solid var(--scenario-color, var(--glass-border));
+  padding: 16px;
+  margin-bottom: 12px;
+  border-left: 2px solid var(--scenario-color, var(--brand));
+  background: var(--bg-elevated);
 }
 
 .hit-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .hit-head h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
+  color: var(--text-primary);
 }
 
 .kv {
@@ -86,7 +88,8 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 12px;
   font-size: 13px;
-  padding: 4px 0;
+  padding: 5px 0;
+  border-top: 1px solid rgba(42, 54, 72, 0.52);
 }
 
 .kv span:last-child {

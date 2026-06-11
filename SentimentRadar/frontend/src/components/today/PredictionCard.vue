@@ -84,8 +84,11 @@ function stockTagType(label: StockCandidate['label']) {
 .prediction-card {
   position: relative;
   height: 100%;
-  padding: 20px;
+  padding: 16px;
   overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--scenario-color) 14%, transparent), transparent 36%),
+    var(--bg-elevated);
 }
 
 /* 场景色条与辉光 */
@@ -95,7 +98,7 @@ function stockTagType(label: StockCandidate['label']) {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
+  width: 2px;
   background: var(--scenario-color);
   box-shadow: 0 0 16px var(--scenario-color);
 }
@@ -125,7 +128,8 @@ function stockTagType(label: StockCandidate['label']) {
 
 h3 {
   margin: 0 0 8px;
-  font-size: 16px;
+  font-size: 18px;
+  color: var(--text-primary);
 }
 
 .judgement {
@@ -138,7 +142,7 @@ h3 {
 .rows {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   margin-bottom: 12px;
 }
 
@@ -170,10 +174,10 @@ h3 {
 
 .stock-pool {
   margin: 2px 0 12px;
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
 }
 
 .stock-pool-head {
@@ -192,7 +196,7 @@ h3 {
 
 .stock-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
@@ -203,7 +207,8 @@ h3 {
   align-items: center;
   padding: 8px;
   border-radius: 10px;
-  background: rgba(10, 15, 26, 0.45);
+  background: var(--bg-elevated);
+  border: 1px solid rgba(42, 54, 72, 0.72);
 }
 
 .stock-item strong {

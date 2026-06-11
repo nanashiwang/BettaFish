@@ -90,7 +90,7 @@ def run_pipeline(trade_date: Optional[date] = None) -> Dict[str, Any]:
                     "（未配置 tushare token；akshare 兜底在当前网络不可达。"
                     "请在后台「平台设置 → 雷达管线」填写 tushare token 后重试）"
                     if not config.get("tushare_token")
-                    else "（tushare 与 akshare 均失败，请检查 token 积分与网络）"
+                    else "（同花顺、申万行业降级源与 akshare 均失败，请检查 token 权限、积分与网络）"
                 )
                 raise RuntimeError(f"获取板块清单失败{hint}: {exc}")
             stats["board_universe"] = len(boards)
@@ -117,7 +117,7 @@ def run_pipeline(trade_date: Optional[date] = None) -> Dict[str, Any]:
             stats["boards_quoted"] = len(quotes_by_board)
             if not quotes_by_board:
                 raise RuntimeError(
-                    "全部板块行情拉取失败：请在后台检查 tushare token（akshare 兜底在当前网络可能不可用）"
+                    "全部板块行情拉取失败：请在后台检查 tushare token 权限，或确认 akshare 网络可用"
                 )
             _update_run(run_id, stage="signals", stats=stats)
 

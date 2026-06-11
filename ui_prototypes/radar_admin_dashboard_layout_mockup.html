@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BettaFish Radar Admin Layout Mockup</title>
+  <style>
+    :root {
+      --bg: #f7fafc;
+      --panel: #ffffff;
+      --panel-soft: #f4f8fb;
+      --line: #dde7ef;
+      --ink: #142033;
+      --muted: #6d7d8f;
+      --brand: #0f7c8a;
+      --brand-2: #21b7a8;
+      --blue: #2f80ed;
+      --amber: #f5a524;
+      --red: #e94f64;
+      --green: #16a673;
+      --shadow: 0 18px 45px rgba(18, 43, 66, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 0%, rgba(33,183,168,.13), transparent 30%),
+                  linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
+      color: var(--ink);
+      font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: 54px 1fr;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      letter-spacing: .2px;
+    }
+
+    .logo {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background: conic-gradient(from 210deg, #0d5f7a, #21b7a8, #6fd6ff, #0d5f7a);
+      box-shadow: 0 8px 18px rgba(15,124,138,.28);
+    }
+
+    .topnav {
+      margin-left: 28px;
+      display: flex;
+      gap: 28px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .topnav span:first-child { color: var(--brand); }
+    .top-left { display: flex; align-items: center; }
+    .top-actions { display: flex; align-items: center; gap: 12px; color: var(--muted); }
+    .icon-btn, .avatar {
+      height: 30px;
+      border-radius: 999px;
+      background: #f1f5f8;
+      border: 1px solid #edf1f5;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+    }
+    .icon-btn { width: 30px; }
+    .avatar { padding: 0 10px; gap: 8px; grid-auto-flow: column; }
+    .avatar-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--brand-2); color: #fff; display: grid; place-items: center; font-size: 11px; }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 146px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      padding: 22px 10px 18px;
+      border-right: 1px solid var(--line);
+      background: rgba(255,255,255,.74);
+    }
+
+    .side-title {
+      color: #a0adba;
+      font-size: 12px;
+      margin: 18px 8px 8px;
+    }
+
+    .side-item {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 650;
+      color: #304052;
+    }
+    .side-item.active {
+      color: #087382;
+      background: #e6f7f7;
+      box-shadow: inset 3px 0 0 var(--brand);
+    }
+    .side-dot { width: 16px; text-align: center; color: #6b7c8f; }
+
+    main {
+      padding: 56px 24px 28px;
+      max-width: 1480px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+    .hero h1 { margin: 0; font-size: 24px; letter-spacing: .2px; }
+    .hero p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+    .search-row { display: flex; gap: 10px; }
+    .search, .round {
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      box-shadow: 0 6px 20px rgba(35, 60, 80, .05);
+    }
+    .search { width: 210px; display: flex; align-items: center; padding: 0 14px; color: var(--muted); }
+    .round { width: 36px; display: grid; place-items: center; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-head {
+      height: 38px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      font-weight: 750;
+      font-size: 13px;
+    }
+    .metric-body { padding: 14px 16px 16px; display: grid; grid-template-columns: 1fr 88px; gap: 12px; align-items: center; }
+    .metric-label { color: var(--muted); font-size: 12px; }
+    .metric-value { font-size: 22px; font-weight: 850; margin-top: 4px; }
+    .mini-chart { height: 42px; border-radius: 10px; background: linear-gradient(135deg, rgba(33,183,168,.10), rgba(47,128,237,.08)); position: relative; overflow: hidden; }
+    .mini-chart:after {
+      content: "";
+      position: absolute;
+      inset: 8px 6px;
+      background: linear-gradient(135deg, transparent 10%, transparent 35%, var(--brand-2) 36%, transparent 39%, transparent 58%, var(--blue) 60%, transparent 63%);
+      border-radius: 8px;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(0, 2.05fr) minmax(300px, .68fr);
+      gap: 14px;
+    }
+
+    .left-stack, .right-stack { display: grid; gap: 14px; align-content: start; }
+    .signal-board { min-height: 348px; }
+    .signal-toolbar { display: flex; gap: 18px; color: var(--muted); font-weight: 600; }
+    .signal-toolbar span:first-child { color: var(--ink); }
+    .signal-body { padding: 18px 20px 20px; }
+    .signal-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .signal-title h2 { margin: 0; font-size: 17px; }
+    .badge { border-radius: 999px; padding: 4px 9px; background: #e8f8f7; color: #087382; font-size: 12px; font-weight: 800; }
+
+    .signal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .signal-card {
+      border: 1px solid #dce8ef;
+      border-radius: 14px;
+      padding: 14px;
+      background: linear-gradient(180deg, #fff, #f7fbfd);
+      min-height: 168px;
+    }
+    .signal-kicker { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+    .signal-card h3 { margin: 0 0 8px; font-size: 18px; }
+    .signal-card p { margin: 0; color: #536477; line-height: 1.55; font-size: 13px; }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+    .chip { padding: 4px 7px; border-radius: 999px; background: #eef5f8; color: #486173; font-size: 11px; font-weight: 700; }
+    .score { color: var(--red); font-weight: 850; }
+
+    .focus-body { padding: 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .focus-item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 13px 14px;
+      background: #fff;
+      display: grid;
+      gap: 8px;
+    }
+    .focus-top { display: flex; justify-content: space-between; font-weight: 800; }
+    .focus-meta { color: var(--muted); font-size: 12px; }
+    .bar { height: 7px; background: #eaf1f5; border-radius: 999px; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); border-radius: inherit; }
+
+    .chart-panel { min-height: 250px; }
+    .chart-body { padding: 16px 20px 20px; }
+    .bars { height: 150px; display: flex; align-items: end; gap: 9px; border-bottom: 1px solid var(--line); padding: 0 8px; }
+    .bars i { flex: 1; min-width: 12px; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, #35c4bd, #195c93); box-shadow: inset 0 18px 0 rgba(255,255,255,.22); }
+    .legend { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 9px 14px; color: var(--muted); font-size: 12px; }
+    .legend span:before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; background: var(--brand-2); }
+
+    .side-card-body { padding: 14px 16px; }
+    .status-list { display: grid; gap: 12px; }
+    .status-row { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #eef3f6; }
+    .status-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .status-icon { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; color: #fff; font-weight: 900; }
+    .status-title { font-weight: 800; font-size: 13px; }
+    .status-sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; color: #526475; font-size: 12px; font-weight: 700; }
+
+    .run-timeline { display: grid; gap: 12px; }
+    .run-item { display: grid; grid-template-columns: 12px 1fr; gap: 10px; }
+    .run-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); margin-top: 5px; box-shadow: 0 0 0 4px rgba(22,166,115,.13); }
+    .run-item:nth-child(2) .run-dot { background: var(--amber); box-shadow: 0 0 0 4px rgba(245,165,36,.14); }
+    .run-title { font-weight: 800; font-size: 13px; }
+    .run-msg { color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.45; }
+
+    @media (max-width: 1040px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      main { padding-top: 28px; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .dashboard { grid-template-columns: 1fr; }
+      .signal-grid, .focus-body { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="top-left">
+        <div class="brand"><div class="logo"></div><span>BettaFish 雷达</span></div>
+        <nav class="topnav"><span>首页</span><span>控制台</span><span>模型广场</span><span>额度查询</span><span>文档</span></nav>
+      </div>
+      <div class="top-actions"><div class="icon-btn">🔔</div><div class="icon-btn">⌘</div><div class="icon-btn">文</div><div class="avatar"><i class="avatar-dot">N</i>nanashiwang⌄</div></div>
+    </header>
+
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="side-title">工作台</div>
+        <div class="side-item active"><span class="side-dot">▣</span>今日信号</div>
+        <div class="side-item"><span class="side-dot">★</span>我的关注</div>
+        <div class="side-item"><span class="side-dot">⌁</span>历史复盘</div>
+        <div class="side-title">控制台</div>
+        <div class="side-item"><span class="side-dot">◈</span>数据看板</div>
+        <div class="side-item"><span class="side-dot">⚙</span>管线配置</div>
+        <div class="side-item"><span class="side-dot">☷</span>系统接入</div>
+        <div class="side-item"><span class="side-dot">◎</span>运行日志</div>
+        <div class="side-title">管理员</div>
+        <div class="side-item"><span class="side-dot">◌</span>用户管理</div>
+        <div class="side-item"><span class="side-dot">▤</span>订阅管理</div>
+        <div class="side-item"><span class="side-dot">✦</span>审计日志</div>
+      </aside>
+
+      <main>
+        <section class="hero">
+          <div><h1>👋 早上好，nanashiwang</h1><p>今天优先看左侧信号流：先判断舆情-行情背离，再跟进你的关注池。</p></div>
+          <div class="search-row"><div class="search">搜索股票 / 主题 / 板块</div><div class="round">⌕</div><div class="round">↻</div></div>
+        </section>
+
+        <section class="metrics">
+          <div class="card"><div class="card-head">今日信号</div><div class="metric-body"><div><div class="metric-label">强信号 / 总信号</div><div class="metric-value">3 / 12</div></div><div class="mini-chart"></div></div></div>
+          <div class="card"><div class="card-head">我的关注命中</div><div class="metric-body"><div><div class="metric-label">股票 · 主题 · 板块</div><div class="metric-value">8 项</div></div><div class="mini-chart"></div></div></div>
+          <div class="card"><div class="card-head">舆情热度</div><div class="metric-body"><div><div class="metric-label">全网热榜样本</div><div class="metric-value">426</div></div><div class="mini-chart"></div></div></div>
+          <div class="card"><div class="card-head">管线状态</div><div class="metric-body"><div><div class="metric-label">最近运行</div><div class="metric-value">16:35</div></div><div class="mini-chart"></div></div></div>
+        </section>
+
+        <section class="dashboard">
+          <div class="left-stack">
+            <div class="card signal-board">
+              <div class="card-head"><span>今日信号</span><div class="signal-toolbar"><span>预判卡</span><span>/ 热度排序</span><span>/ 背离象限</span><span>/ 证据链</span></div></div>
+              <div class="signal-body">
+                <div class="signal-title"><h2>舆情-价格背离 Top3</h2><span class="badge">优先放在左侧主视觉</span></div>
+                <div class="signal-grid">
+                  <article class="signal-card"><div class="signal-kicker"><span>先闻后动</span><span class="score">强度 91</span></div><h3>低空经济升温</h3><p>多源热榜出现政策与产业链讨论，板块近 3 日价格反应偏弱，适合持续观察。</p><div class="chips"><span class="chip">政策</span><span class="chip">概念板块</span><span class="chip">证据 7 条</span></div></article>
+                  <article class="signal-card"><div class="signal-kicker"><span>同步共振</span><span class="score">强度 86</span></div><h3>AI 端侧芯片</h3><p>新闻与交易活跃度同步抬升，需关注过热风险与公告兑现节奏。</p><div class="chips"><span class="chip">AI</span><span class="chip">半导体</span><span class="chip">风险中</span></div></article>
+                  <article class="signal-card"><div class="signal-kicker"><span>先动后闻</span><span class="score">强度 79</span></div><h3>创新药出海</h3><p>板块先行上涨后舆情跟进，卡片定调偏谨慎，提示消息兑现压力。</p><div class="chips"><span class="chip">医药</span><span class="chip">出海</span><span class="chip">警惕</span></div></article>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span>我的关注</span><span class="badge">左侧第二优先级</span></div>
+              <div class="focus-body">
+                <div class="focus-item"><div class="focus-top"><span>机器人</span><span>命中 4</span></div><div class="focus-meta">关联：减速器 / 工业母机 / AI 端侧</div><div class="bar"><i style="width:82%"></i></div></div>
+                <div class="focus-item"><div class="focus-top"><span>半导体设备</span><span>命中 3</span></div><div class="focus-meta">情绪：偏强 · 价格：滞后</div><div class="bar"><i style="width:68%"></i></div></div>
+                <div class="focus-item"><div class="focus-top"><span>中际旭创</span><span>命中 2</span></div><div class="focus-meta">新闻源：财联社 / 雪球热榜</div><div class="bar"><i style="width:54%"></i></div></div>
+                <div class="focus-item"><div class="focus-top"><span>算力租赁</span><span>命中 5</span></div><div class="focus-meta">高关注，但风险词较多</div><div class="bar"><i style="width:76%"></i></div></div>
+              </div>
+            </div>
+
+            <div class="card chart-panel">
+              <div class="card-head"><span>历史复盘</span><div class="signal-toolbar"><span>命中率</span><span>/ 1D收益</span><span>/ 3D收益</span><span>/ 失效条件</span></div></div>
+              <div class="chart-body"><div class="bars"><i style="height:64%"></i><i style="height:78%"></i><i style="height:52%"></i><i style="height:88%"></i><i style="height:45%"></i><i style="height:58%"></i><i style="height:72%"></i><i style="height:36%"></i><i style="height:69%"></i><i style="height:81%"></i><i style="height:49%"></i><i style="height:62%"></i></div><div class="legend"><span>先闻后动</span><span>同步共振</span><span>先动后闻</span><span>我的关注命中</span></div></div>
+            </div>
+          </div>
+
+          <aside class="right-stack">
+            <div class="card"><div class="card-head">管线运行</div><div class="side-card-body"><div class="run-timeline"><div class="run-item"><i class="run-dot"></i><div><div class="run-title">今日 16:35 成功</div><div class="run-msg">采集 426 条，映射 38 个板块，生成 3 张预判卡。</div></div></div><div class="run-item"><i class="run-dot"></i><div><div class="run-title">下一次 09:35</div><div class="run-msg">开盘后刷新热榜与板块价格背离。</div></div></div><div class="run-item"><i class="run-dot"></i><div><div class="run-title">tushare 权限</div><div class="run-msg">ths_index / ths_daily 需要确认积分权限。</div></div></div></div></div></div>
+            <div class="card"><div class="card-head">系统接入</div><div class="side-card-body status-list"><div class="status-row"><div class="status-icon" style="background:#2f80ed">AI</div><div><div class="status-title">Radar LLM</div><div class="status-sub">OPENAI_BASE_URL 已配置</div></div><span class="pill">测试</span></div><div class="status-row"><div class="status-icon" style="background:#16a673">TS</div><div><div class="status-title">Tushare</div><div class="status-sub">行情主源，Akshare 兜底</div></div><span class="pill">权限</span></div><div class="status-row"><div class="status-icon" style="background:#f5a524">DB</div><div><div class="status-title">PostgreSQL</div><div class="status-sub">Radar 用户/管线结果库</div></div><span class="pill">正常</span></div></div></div>
+            <div class="card"><div class="card-head">配置完成度</div><div class="side-card-body"><div class="focus-item"><div class="focus-top"><span>生产可用度</span><span>72%</span></div><div class="focus-meta">LLM、行情、数据库、调度、告警</div><div class="bar"><i style="width:72%"></i></div></div><div style="height:12px"></div><div class="focus-item"><div class="focus-top"><span>运营后台</span><span>84%</span></div><div class="focus-meta">用户、订阅、审计、系统配置</div><div class="bar"><i style="width:84%"></i></div></div></div></div>
+            <div class="card"><div class="card-head">规划说明</div><div class="side-card-body" style="color:var(--muted);font-size:13px;line-height:1.65">左侧承载用户每天必看的内容：今日信号、我的关注、历史复盘；右侧承载管理员与系统态：管线、数据源、配置完成度。这样可以减少入口，同时让 Radar 像一个完整产品而不是多个散页面。</div></div>
+          </aside>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

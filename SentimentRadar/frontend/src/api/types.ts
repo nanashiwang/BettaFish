@@ -300,6 +300,14 @@ export interface AuditLog {
   target: string
 }
 
+// ---------- 系统接入配置 ----------
+export type SystemConfig = Record<string, string | number | boolean>
+
+export interface SystemStatus extends ApiResult {
+  started: boolean
+  starting: boolean
+}
+
 // ---------- 雷达管线 ----------
 export interface RadarPipelineConfig {
   enabled: boolean

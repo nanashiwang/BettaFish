@@ -10,6 +10,8 @@ import type {
   Plan,
   RadarPipelineConfig,
   RadarPipelineRun,
+  SystemConfig,
+  SystemStatus,
 } from './types'
 
 export function fetchOverview() {
@@ -52,6 +54,30 @@ export function updateAdminSettings(payload: Partial<AdminSettings>) {
 
 export function fetchAuditLogs() {
   return http.get<ApiResult & { logs: AuditLog[] }>('/admin/audit-logs').then((res) => res.data)
+}
+
+export function fetchSystemConfig() {
+  return http
+    .get<ApiResult & { config: SystemConfig }>('/admin/system/config')
+    .then((res) => res.data)
+}
+
+export function updateSystemConfig(payload: Partial<SystemConfig>) {
+  return http
+    .patch<ApiResult & { config: SystemConfig }>('/admin/system/config', payload)
+    .then((res) => res.data)
+}
+
+export function fetchSystemStatus() {
+  return http.get<SystemStatus>('/admin/system/status').then((res) => res.data)
+}
+
+export function startSystemServices() {
+  return http.post<ApiResult>('/admin/system/start', undefined, { timeout: 120000 }).then((res) => res.data)
+}
+
+export function shutdownSystemServices() {
+  return http.post<ApiResult>('/admin/system/shutdown', undefined, { timeout: 10000 }).then((res) => res.data)
 }
 
 export function fetchRadarConfig() {

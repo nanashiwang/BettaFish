@@ -15,7 +15,7 @@ import time
 import threading
 from datetime import datetime
 from queue import Queue
-from flask import Flask, render_template, request, jsonify, Response, session, send_from_directory
+from flask import Flask, render_template, request, jsonify, Response, session, send_from_directory, redirect
 from flask_socketio import SocketIO, emit
 import atexit
 import requests
@@ -114,6 +114,8 @@ CONFIG_FILE_PATH = Path(__file__).resolve().parent / 'config.py'
 CONFIG_KEYS = [
     'HOST',
     'PORT',
+    'OPENAI_API_KEY',
+    'OPENAI_BASE_URL',
     'DB_DIALECT',
     'DB_HOST',
     'DB_PORT',
@@ -1010,7 +1012,12 @@ def _require_radar_admin_json():
 
 @app.route('/')
 def index():
-    """主页"""
+    """统一入口收口到 Radar SPA。"""
+    return redirect('/radar')
+
+@app.route('/legacy')
+def legacy_index():
+    """旧控制台入口，保留用于未迁移功能兜底。"""
     return render_template('index.html')
 
 @app.route('/favicon.ico')
@@ -1278,6 +1285,124 @@ def api_admin_audit_logs():
     if auth_error:
         return auth_error
     return jsonify(get_radar_audit_logs())
+
+@app.route('/api/admin/system/config', methods=['GET', 'PATCH'])
+def api_admin_system_config():
+    """读取或更新旧控制台迁移来的系统接入配置。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+
+    if request.method == 'GET':
+        return jsonify({'success': True, 'config': read_config_values()})
+
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict) or not payload:
+        return jsonify({'success': False, 'message': '请求体不能为空'}), 400
+
+    updates = {
+        key: (value if value is not None else '')
+        for key, value in payload.items()
+        if key in CONFIG_KEYS
+    }
+    if not updates:
+        return jsonify({'success': False, 'message': '没有可更新的配置项'}), 400
+
+    try:
+        write_config_values(updates)
+        return jsonify({'success': True, 'config': read_config_values()})
+    except Exception as exc:
+        logger.exception("更新系统配置失败")
+        return jsonify({'success': False, 'message': f'更新系统配置失败: {exc}'}), 500
+
+@app.route('/api/admin/system/status')
+def api_admin_system_status():
+    """返回旧控制台组件启动状态。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    state = _get_system_state()
+    return jsonify({
+        'success': True,
+        'started': state['started'],
+        'starting': state['starting'],
+    })
+
+@app.route('/api/admin/system/start', methods=['POST'])
+def api_admin_system_start():
+    """从 Radar 后台启动旧控制台的完整组件组。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+
+    allowed, message = _prepare_system_start()
+    if not allowed:
+        return jsonify({'success': False, 'message': message}), 400
+
+    try:
+        success, logs, errors = initialize_system_components()
+        if success:
+            _set_system_state(started=True)
+            return jsonify({'success': True, 'message': '系统启动成功', 'logs': logs})
+
+        _set_system_state(started=False)
+        return jsonify({
+            'success': False,
+            'message': '系统启动失败',
+            'logs': logs,
+            'errors': errors,
+        }), 500
+    except Exception as exc:  # pragma: no cover - 保底捕获
+        logger.exception("后台启动系统过程中出现异常")
+        _set_system_state(started=False)
+        return jsonify({'success': False, 'message': f'系统启动异常: {exc}'}), 500
+    finally:
+        _set_system_state(starting=False)
+
+@app.route('/api/admin/system/shutdown', methods=['POST'])
+def api_admin_system_shutdown():
+    """从 Radar 后台停止旧控制台组件并关闭当前服务进程。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+
+    state = _get_system_state()
+    if state['starting']:
+        return jsonify({'success': False, 'message': '系统正在启动/重启，请稍候'}), 400
+
+    target_ports = [
+        f"{name}:{info['port']}"
+        for name, info in processes.items()
+        if info.get('port')
+    ]
+
+    if not _mark_shutdown_requested():
+        running = _describe_running_children()
+        detail = '关机指令已下发，请稍等...'
+        if running:
+            detail = f"关机指令已下发，等待进程退出: {', '.join(running)}"
+        if target_ports:
+            detail = f"{detail}（端口: {', '.join(target_ports)}）"
+        return jsonify({'success': True, 'message': detail, 'ports': target_ports})
+
+    running = _describe_running_children()
+    if running:
+        _log_shutdown_step("后台关闭系统，正在等待子进程退出: " + ", ".join(running))
+    else:
+        _log_shutdown_step("后台关闭系统，未检测到存活子进程")
+
+    try:
+        _set_system_state(started=False, starting=False)
+        _start_async_shutdown(cleanup_timeout=6.0)
+        message = '关闭系统指令已下发，正在停止进程'
+        if running:
+            message = f"{message}: {', '.join(running)}"
+        if target_ports:
+            message = f"{message}（端口: {', '.join(target_ports)}）"
+        return jsonify({'success': True, 'message': message, 'ports': target_ports})
+    except Exception as exc:  # pragma: no cover - 兜底捕获
+        logger.exception("后台关闭系统过程中出现异常")
+        return jsonify({'success': False, 'message': f'系统关闭异常: {exc}'}), 500
 
 @app.route('/api/admin/radar/config', methods=['GET', 'PATCH'])
 def api_admin_radar_config():

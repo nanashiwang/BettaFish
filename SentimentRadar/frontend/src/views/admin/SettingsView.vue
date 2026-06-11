@@ -1,5 +1,95 @@
 <template>
   <div>
+    <!-- 系统接入配置：从旧首页配置弹窗迁入 Radar 后台 -->
+    <el-card shadow="never" class="panel">
+      <template #header>
+        <div class="panel-head">
+          <div>
+            <span>系统接入配置</span>
+            <span class="muted form-hint">统一管理旧控制台、三大 Engine 与 Radar LLM</span>
+          </div>
+          <div class="action-row">
+            <el-tag v-if="systemStatus" :type="systemStatus.started ? 'success' : systemStatus.starting ? 'warning' : 'info'">
+              {{ systemStatus.starting ? '启动中' : systemStatus.started ? '已启动' : '未启动' }}
+            </el-tag>
+            <el-button :loading="systemLoading" @click="loadSystemConfig">刷新</el-button>
+            <el-button :loading="systemSaving" type="primary" @click="handleSaveSystemConfig()">
+              保存配置
+            </el-button>
+            <el-button
+              :loading="systemStarting"
+              :disabled="systemStatus?.started || systemStatus?.starting"
+              type="success"
+              @click="handleStartSystem"
+            >
+              保存并启动系统
+            </el-button>
+            <el-popconfirm
+              title="会停止当前控制台启动的子进程，并可能关闭服务进程，确定继续？"
+              confirm-button-text="确定关闭"
+              cancel-button-text="取消"
+              @confirm="handleShutdownSystem"
+            >
+              <template #reference>
+                <el-button :loading="systemStopping" type="danger" plain>关闭系统</el-button>
+              </template>
+            </el-popconfirm>
+          </div>
+        </div>
+      </template>
+
+      <div v-if="systemLoading" v-loading="true" class="loading-block-sm" />
+      <template v-else>
+        <el-alert
+          class="system-alert"
+          type="info"
+          :closable="false"
+          show-icon
+          title="这里承接 http://127.0.0.1:5010/ 旧首页的配置与启动功能；Radar 管线仍在下方单独配置 tushare。"
+        />
+        <el-collapse v-model="systemActiveGroups">
+          <el-collapse-item v-for="group in systemConfigGroups" :key="group.title" :name="group.title">
+            <template #title>
+              <div>
+                <b>{{ group.title }}</b>
+                <span class="muted group-subtitle">{{ group.subtitle }}</span>
+              </div>
+            </template>
+            <el-row :gutter="16">
+              <el-col
+                v-for="field in visibleSystemFields(group.fields)"
+                :key="field.key"
+                :xs="24"
+                :md="field.wide ? 24 : 8"
+              >
+                <el-form-item :label="field.label">
+                  <el-select
+                    v-if="field.type === 'select'"
+                    v-model="systemConfig[field.key]"
+                    style="width: 100%"
+                    @change="systemDirty = true"
+                  >
+                    <el-option v-for="option in field.options" :key="option" :label="option" :value="option" />
+                  </el-select>
+                  <el-input
+                    v-else
+                    v-model="systemConfig[field.key]"
+                    :type="field.type === 'password' ? 'password' : 'text'"
+                    :show-password="field.type === 'password'"
+                    :placeholder="`填写${field.label}`"
+                    @input="systemDirty = true"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-collapse-item>
+        </el-collapse>
+        <p class="muted config-note">
+          配置会写入根目录 .env；端口字段会自动转数字。{{ systemDirty ? '当前有未保存修改。' : '当前配置已同步。' }}
+        </p>
+      </template>
+    </el-card>
+
     <!-- 雷达管线：真实信号产线的配置与运行管理 -->
     <el-card shadow="never" class="panel">
       <template #header>
@@ -171,15 +261,206 @@ import {
   fetchAdminSettings,
   fetchRadarConfig,
   fetchRadarRuns,
+  fetchSystemConfig,
+  fetchSystemStatus,
   runRadarPipeline,
+  shutdownSystemServices,
+  startSystemServices,
   updateAdminSettings,
   updateRadarConfig,
+  updateSystemConfig,
 } from '../../api/admin'
-import type { AdminSettings, RadarPipelineConfig, RadarPipelineRun } from '../../api/types'
+import type { AdminSettings, RadarPipelineConfig, RadarPipelineRun, SystemConfig, SystemStatus } from '../../api/types'
 
 const settings = ref<AdminSettings | null>(null)
 const loading = ref(true)
 const saving = ref(false)
+
+// ---------- 旧首页系统配置 ----------
+type SystemConfigField = {
+  key: string
+  label: string
+  type?: 'text' | 'password' | 'select'
+  options?: string[]
+  wide?: boolean
+  condition?: { key: string; value: string }
+}
+
+type SystemConfigGroup = {
+  title: string
+  subtitle: string
+  fields: SystemConfigField[]
+}
+
+const systemConfigGroups: SystemConfigGroup[] = [
+  {
+    title: 'Radar LLM',
+    subtitle: '雷达管线使用的 OpenAI 兼容接口',
+    fields: [
+      { key: 'OPENAI_API_KEY', label: 'API Key', type: 'password' },
+      { key: 'OPENAI_BASE_URL', label: 'Base URL', wide: true },
+    ],
+  },
+  {
+    title: '数据库连接',
+    subtitle: '用于连接社媒数据库；Radar 用户库由 RADAR_DB_URL/Compose 管理',
+    fields: [
+      { key: 'DB_DIALECT', label: '数据库类型', type: 'select', options: ['mysql', 'postgresql'] },
+      { key: 'DB_HOST', label: '主机地址' },
+      { key: 'DB_PORT', label: '端口' },
+      { key: 'DB_USER', label: '用户名' },
+      { key: 'DB_PASSWORD', label: '密码', type: 'password' },
+      { key: 'DB_NAME', label: '数据库名称' },
+      { key: 'DB_CHARSET', label: '字符集' },
+    ],
+  },
+  {
+    title: 'Insight Agent',
+    subtitle: '推荐 kimi-k2',
+    fields: [
+      { key: 'INSIGHT_ENGINE_API_KEY', label: 'API Key', type: 'password' },
+      { key: 'INSIGHT_ENGINE_BASE_URL', label: 'Base URL', wide: true },
+      { key: 'INSIGHT_ENGINE_MODEL_NAME', label: '模型名称' },
+    ],
+  },
+  {
+    title: 'Media Agent',
+    subtitle: '推荐 gemini-2.5-pro',
+    fields: [
+      { key: 'MEDIA_ENGINE_API_KEY', label: 'API Key', type: 'password' },
+      { key: 'MEDIA_ENGINE_BASE_URL', label: 'Base URL', wide: true },
+      { key: 'MEDIA_ENGINE_MODEL_NAME', label: '模型名称' },
+    ],
+  },
+  {
+    title: 'Query Agent',
+    subtitle: '推荐 deepseek-chat',
+    fields: [
+      { key: 'QUERY_ENGINE_API_KEY', label: 'API Key', type: 'password' },
+      { key: 'QUERY_ENGINE_BASE_URL', label: 'Base URL', wide: true },
+      { key: 'QUERY_ENGINE_MODEL_NAME', label: '模型名称' },
+    ],
+  },
+  {
+    title: 'Report Agent',
+    subtitle: '推荐 gemini-2.5-pro',
+    fields: [
+      { key: 'REPORT_ENGINE_API_KEY', label: 'API Key', type: 'password' },
+      { key: 'REPORT_ENGINE_BASE_URL', label: 'Base URL', wide: true },
+      { key: 'REPORT_ENGINE_MODEL_NAME', label: '模型名称' },
+    ],
+  },
+  {
+    title: 'Forum Host',
+    subtitle: '推荐 qwen-plus',
+    fields: [
+      { key: 'FORUM_HOST_API_KEY', label: 'API Key', type: 'password' },
+      { key: 'FORUM_HOST_BASE_URL', label: 'Base URL', wide: true },
+      { key: 'FORUM_HOST_MODEL_NAME', label: '模型名称' },
+    ],
+  },
+  {
+    title: 'Keyword Optimizer',
+    subtitle: '推荐 qwen-plus',
+    fields: [
+      { key: 'KEYWORD_OPTIMIZER_API_KEY', label: 'API Key', type: 'password' },
+      { key: 'KEYWORD_OPTIMIZER_BASE_URL', label: 'Base URL', wide: true },
+      { key: 'KEYWORD_OPTIMIZER_MODEL_NAME', label: '模型名称' },
+    ],
+  },
+  {
+    title: '外部检索工具',
+    subtitle: 'Tavily + Anspire/Bocha',
+    fields: [
+      { key: 'SEARCH_TOOL_TYPE', label: '选择检索工具', type: 'select', options: ['AnspireAPI', 'BochaAPI'] },
+      { key: 'TAVILY_API_KEY', label: 'Tavily API Key', type: 'password' },
+      { key: 'ANSPIRE_API_KEY', label: 'Anspire API Key', type: 'password', condition: { key: 'SEARCH_TOOL_TYPE', value: 'AnspireAPI' } },
+      { key: 'BOCHA_WEB_SEARCH_API_KEY', label: 'Bocha API Key', type: 'password', condition: { key: 'SEARCH_TOOL_TYPE', value: 'BochaAPI' } },
+    ],
+  },
+]
+
+const systemActiveGroups = ref(['Radar LLM', '数据库连接', '外部检索工具'])
+const systemConfig = ref<SystemConfig>({})
+const systemStatus = ref<SystemStatus | null>(null)
+const systemLoading = ref(true)
+const systemSaving = ref(false)
+const systemStarting = ref(false)
+const systemStopping = ref(false)
+const systemDirty = ref(false)
+
+function visibleSystemFields(fields: SystemConfigField[]) {
+  return fields.filter((field) => !field.condition || systemConfig.value[field.condition.key] === field.condition.value)
+}
+
+function systemConfigPayload() {
+  const payload: SystemConfig = {}
+  for (const group of systemConfigGroups) {
+    for (const field of group.fields) {
+      const rawValue = systemConfig.value[field.key] ?? ''
+      if (/PORT$/i.test(field.key) && rawValue !== '') {
+        const numeric = Number(rawValue)
+        payload[field.key] = Number.isNaN(numeric) ? rawValue : numeric
+      } else {
+        payload[field.key] = rawValue
+      }
+    }
+  }
+  return payload
+}
+
+async function loadSystemStatus() {
+  systemStatus.value = await fetchSystemStatus()
+}
+
+async function loadSystemConfig() {
+  systemLoading.value = true
+  try {
+    const [configResult] = await Promise.all([fetchSystemConfig(), loadSystemStatus()])
+    systemConfig.value = { ...configResult.config }
+    systemDirty.value = false
+  } finally {
+    systemLoading.value = false
+  }
+}
+
+async function handleSaveSystemConfig(silent = false) {
+  systemSaving.value = true
+  try {
+    const result = await updateSystemConfig(systemConfigPayload())
+    systemConfig.value = { ...result.config }
+    systemDirty.value = false
+    if (!silent) ElMessage.success('系统配置已保存')
+    return true
+  } finally {
+    systemSaving.value = false
+  }
+}
+
+async function handleStartSystem() {
+  systemStarting.value = true
+  try {
+    if (systemDirty.value) {
+      await handleSaveSystemConfig(true)
+    }
+    const result = await startSystemServices()
+    ElMessage.success(result.message || '系统启动成功')
+    await loadSystemStatus()
+  } finally {
+    systemStarting.value = false
+  }
+}
+
+async function handleShutdownSystem() {
+  systemStopping.value = true
+  try {
+    const result = await shutdownSystemServices()
+    ElMessage.success(result.message || '关闭指令已下发')
+    await loadSystemStatus()
+  } finally {
+    systemStopping.value = false
+  }
+}
 
 // ---------- 雷达管线 ----------
 const pipeline = ref<RadarPipelineConfig | null>(null)
@@ -251,6 +532,7 @@ const pushLabels: Record<string, string> = {
 }
 
 onMounted(async () => {
+  loadSystemConfig()
   loadPipeline()
   loadRuns()
   try {
@@ -287,10 +569,33 @@ async function handleSave() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .form-hint {
   margin-left: 12px;
+}
+
+.system-alert {
+  margin-bottom: 14px;
+}
+
+.group-subtitle {
+  margin-left: 10px;
+  font-weight: 400;
+}
+
+.config-note {
+  margin: 12px 0 0;
+  font-size: 13px;
 }
 
 .time-list {

@@ -147,6 +147,10 @@ const SAMPLE_CARDS: PredictionCardType[] = [
     next: '关注权威来源与公告证据是否持续补充。',
     evidence: '新闻 18 条 / 公告 2 条 / 社媒 260 条',
     tags: ['示例主题', '同步共振'],
+    stock_candidates: [
+      { rank: 1, name: '示例科技', code: '000001.SZ', label: '先动股', return_3d: 5.8, return_5d: 9.6, return_10d: 12.1, volume_ratio: 1.8, data_date: '20260612', reason: '价格已先于舆情反应' },
+      { rank: 2, name: '示例电子', code: '000002.SZ', label: '补涨观察', return_3d: 1.9, return_5d: 3.2, return_10d: 5.4, volume_ratio: 1.3, data_date: '20260612', reason: '涨幅不高但成交放大' },
+    ],
   },
   {
     id: 'sample-2',
@@ -160,6 +164,10 @@ const SAMPLE_CARDS: PredictionCardType[] = [
     next: '关注产能利用率与价格趋势数据。',
     evidence: '新闻 12 条 / 研报 9 条 / 社媒 142 条',
     tags: ['示例板块', '先闻后动'],
+    stock_candidates: [
+      { rank: 1, name: '示例制造', code: '000003.SZ', label: '补涨观察', return_3d: 2.1, return_5d: 4.4, return_10d: 6.2, volume_ratio: 1.2, data_date: '20260612', reason: '涨幅不高但成交放大' },
+      { rank: 2, name: '示例工业', code: '000004.SZ', label: '观察', return_3d: 0.8, return_5d: 1.7, return_10d: 2.8, volume_ratio: 0.9, data_date: '20260612', reason: '纳入观察池' },
+    ],
   },
   {
     id: 'sample-3',
@@ -173,6 +181,9 @@ const SAMPLE_CARDS: PredictionCardType[] = [
     next: '跟踪消息真实性与资金流向。',
     evidence: '新闻 7 条 / 股吧 96 条 / 异动 4 条',
     tags: ['风险提示', '先动后闻'],
+    stock_candidates: [
+      { rank: 1, name: '示例高标', code: '000005.SZ', label: '高位风险', return_3d: 9.2, return_5d: 18.5, return_10d: 24.6, volume_ratio: 2.4, data_date: '20260612', reason: '位置偏高，注意兑现压力' },
+    ],
   },
 ]
 </script>

@@ -31,6 +31,24 @@
         <el-table-column prop="note" label="备注" />
       </el-table>
 
+      <h4>个股观察池</h4>
+      <el-table :data="detail.detail.stock_candidates || []" size="small" empty-text="暂无个股候选">
+        <el-table-column prop="name" label="股票" width="92">
+          <template #default="{ row }">
+            <div class="stock-name">{{ row.name }}</div>
+            <div class="stock-code">{{ row.code }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="label" label="标签" width="88" />
+        <el-table-column label="3日" width="70">
+          <template #default="{ row }">{{ formatPct(row.return_3d) }}</template>
+        </el-table-column>
+        <el-table-column label="量比" width="70">
+          <template #default="{ row }">{{ row.volume_ratio }}</template>
+        </el-table-column>
+        <el-table-column prop="reason" label="入池原因" />
+      </el-table>
+
       <h4>风险边界</h4>
       <ul class="plain-list">
         <li v-for="(item, index) in detail.detail.risk_boundary" :key="index">{{ item }}</li>
@@ -67,6 +85,11 @@ async function load() {
     loading.value = false
   }
 }
+
+function formatPct(value: number | null) {
+  if (value == null) return '-'
+  return `${value > 0 ? '+' : ''}${value}%`
+}
 </script>
 
 <style scoped>
@@ -97,5 +120,14 @@ h4 {
 .timeline {
   padding-left: 4px;
   font-size: 13px;
+}
+
+.stock-name {
+  font-weight: 600;
+}
+
+.stock-code {
+  color: var(--text-faint);
+  font-size: 11px;
 }
 </style>

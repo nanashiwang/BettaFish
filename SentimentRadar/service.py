@@ -97,6 +97,7 @@ def get_today_briefing() -> Dict[str, Any]:
     for row in rows:
         tags = row.tags if isinstance(row.tags, list) else []
         boards = row.boards if isinstance(row.boards, list) else []
+        stock_candidates = row.stock_candidates if isinstance(row.stock_candidates, list) else []
         board_names.extend(b.get("name", "") for b in boards)
         cards.append({
             "id": row.card_id,
@@ -114,6 +115,7 @@ def get_today_briefing() -> Dict[str, Any]:
             "price_z": row.price_z,
             "board_name": boards[0].get("name") if boards else "",
             "board_trend": _board_trend(boards[0].get("code")) if boards else [],
+            "stock_candidates": stock_candidates,
         })
 
     headline = rows[0].headline if rows else ""
@@ -171,6 +173,7 @@ def get_prediction_detail(card_id: str) -> Dict[str, Any]:
     if not row:
         return {"success": False, "message": "未找到对应预判解析"}
     detail = row.detail if isinstance(row.detail, dict) else {}
+    stock_candidates = row.stock_candidates if isinstance(row.stock_candidates, list) else []
     return {
         "success": True,
         "id": card_id,
@@ -185,6 +188,7 @@ def get_prediction_detail(card_id: str) -> Dict[str, Any]:
             "evidence_chain": detail.get("evidence_chain", []),
             "risk_boundary": detail.get("risk_boundary", []),
             "next_watch": detail.get("next_watch", []),
+            "stock_candidates": detail.get("stock_candidates") or stock_candidates,
         },
     }
 

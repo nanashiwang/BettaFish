@@ -16,6 +16,25 @@
       <span class="metric">价格 z <b class="num">{{ card.price_z }}</b></span>
       <span class="metric">强度 <b>{{ card.strength }}</b></span>
     </div>
+    <div v-if="topStocks.length" class="stock-pool">
+      <div class="stock-pool-head">
+        <span>个股观察池</span>
+        <small>非买卖建议 · 看异动顺序</small>
+      </div>
+      <div class="stock-list">
+        <div v-for="stock in topStocks" :key="stock.code" class="stock-item">
+          <div>
+            <strong>{{ stock.name }}</strong>
+            <small>{{ stock.code }}</small>
+          </div>
+          <el-tag size="small" effect="dark" :type="stockTagType(stock.label)">
+            {{ stock.label }}
+          </el-tag>
+          <span class="stock-metric num">3日 {{ formatPct(stock.return_3d) }}</span>
+          <span class="stock-metric num">量比 {{ stock.volume_ratio }}</span>
+        </div>
+      </div>
+    </div>
     <div class="tags">
       <el-tag v-for="tag in card.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
     </div>
@@ -34,7 +53,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { PredictionCard } from '../../api/types'
+import type { PredictionCard, StockCandidate } from '../../api/types'
 import Sparkline from '../charts/Sparkline.vue'
 
 const props = defineProps<{ card: PredictionCard }>()
@@ -45,6 +64,20 @@ const scenarioClass = computed(() => {
   if (props.card.scenario === '同步共振') return 'scenario-resonance'
   return 'scenario-move-first'
 })
+
+const topStocks = computed(() => (props.card.stock_candidates || []).slice(0, 4))
+
+function formatPct(value: number | null) {
+  if (value == null) return '-'
+  return `${value > 0 ? '+' : ''}${value}%`
+}
+
+function stockTagType(label: StockCandidate['label']) {
+  if (label === '高位风险' || label === '弱势回避') return 'danger'
+  if (label === '先动股') return 'warning'
+  if (label === '补涨观察') return 'success'
+  return 'info'
+}
 </script>
 
 <style scoped>
@@ -135,6 +168,61 @@ h3 {
   margin-left: 2px;
 }
 
+.stock-pool {
+  margin: 2px 0 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stock-pool-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stock-pool-head small {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+.stock-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stock-item {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) auto;
+  gap: 4px 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(10, 15, 26, 0.45);
+}
+
+.stock-item strong {
+  display: block;
+  font-size: 13px;
+}
+
+.stock-item small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.stock-metric {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
 .tags {
   display: flex;
   gap: 6px;
@@ -156,5 +244,11 @@ h3 {
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .stock-list {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

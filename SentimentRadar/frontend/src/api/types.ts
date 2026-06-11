@@ -65,6 +65,20 @@ export interface PredictionCard {
   price_z?: number | null
   board_name?: string
   board_trend?: number[]
+  stock_candidates?: StockCandidate[]
+}
+
+export interface StockCandidate {
+  rank: number
+  code: string
+  name: string
+  label: string
+  return_3d: number | null
+  return_5d: number | null
+  return_10d: number | null
+  volume_ratio: number
+  data_date: string
+  reason: string
 }
 
 export interface ScatterPoint {
@@ -109,6 +123,7 @@ export interface PredictionDetail extends ApiResult {
     evidence_chain: { source: string; count: number; credibility: string; note: string }[]
     risk_boundary: string[]
     next_watch: string[]
+    stock_candidates?: StockCandidate[]
   }
 }
 

@@ -61,6 +61,7 @@ def _signal_text(index: int, signal: Dict[str, Any], news: List[Dict[str, Any]])
     topic = signal["topic"]
     board = signal["board"]
     metrics = signal["metrics"]
+    stocks = signal.get("stock_candidates") or []
     titles = []
     source_counts: Dict[str, int] = {}
     for news_index in topic["news_indexes"][:8]:
@@ -70,11 +71,18 @@ def _signal_text(index: int, signal: Dict[str, Any], news: List[Dict[str, Any]])
         name = news[news_index - 1]["source_name"]
         source_counts[name] = source_counts.get(name, 0) + 1
     sources = "、".join(f"{name}{count}条" for name, count in source_counts.items())
+    stock_text = "暂无"
+    if stocks:
+        stock_text = "；".join(
+            f"{item['name']}({item['code']}) {item['label']} 3日{item['return_3d']}% 量比{item['volume_ratio']}"
+            for item in stocks[:6]
+        )
     return (
         f"信号 {index}：{topic['name']}（场景：{signal['scenario']}，强度：{signal['strength']}）\n"
         f"- 舆情：热度分 {topic['heat_score']}（z={topic['heat_z']}），覆盖来源：{sources}\n"
         f"- 板块：{board['name']}（{board['type']}），近 3 日涨幅 {metrics['return_3d']}%"
         f"（z={metrics['price_z']}），量比 {metrics['volume_ratio']}\n"
+        f"- 个股观察池：{stock_text}\n"
         f"- 关联热榜：\n" + "\n".join(titles)
     )
 
@@ -100,6 +108,8 @@ def generate_cards(
         signal = top[(card.get("signal_index") or rank) - 1]
         topic = signal["topic"]
         news_count = len(topic["news_indexes"])
+        detail = card.get("detail") or {}
+        detail["stock_candidates"] = signal.get("stock_candidates", [])
         record = {
             "trade_date": trade_date,
             "rank": rank,
@@ -113,8 +123,9 @@ def generate_cards(
             "next_watch": str(card.get("next") or ""),
             "tags": (card.get("tags") or [topic["name"], signal["scenario"]])[:4],
             "evidence_summary": f"热榜 {news_count} 条 / 热度z {topic['heat_z']} / 价格z {signal['metrics']['price_z']}",
-            "detail": card.get("detail") or {},
+            "detail": detail,
             "boards": signal["all_boards"],
+            "stock_candidates": signal.get("stock_candidates", []),
             "heat_z": topic["heat_z"],
             "price_z": signal["metrics"]["price_z"],
             "headline": headline,
@@ -129,11 +140,12 @@ def generate_cards(
                     """
                     INSERT INTO radar_predictions
                         (trade_date, rank, card_id, scenario, strength, title, judgement, reason,
-                         risk, next_watch, tags, evidence_summary, detail, boards, heat_z, price_z, headline)
+                         risk, next_watch, tags, evidence_summary, detail, boards, stock_candidates,
+                         heat_z, price_z, headline)
                     VALUES
                         (:trade_date, :rank, :card_id, :scenario, :strength, :title, :judgement, :reason,
                          :risk, :next_watch, CAST(:tags AS JSONB), :evidence_summary, CAST(:detail AS JSONB),
-                         CAST(:boards AS JSONB), :heat_z, :price_z, :headline)
+                         CAST(:boards AS JSONB), CAST(:stock_candidates AS JSONB), :heat_z, :price_z, :headline)
                     """
                 ),
                 {
@@ -141,6 +153,7 @@ def generate_cards(
                     "tags": json.dumps(record["tags"], ensure_ascii=False),
                     "detail": json.dumps(record["detail"], ensure_ascii=False),
                     "boards": json.dumps(record["boards"], ensure_ascii=False),
+                    "stock_candidates": json.dumps(record["stock_candidates"], ensure_ascii=False),
                 },
             )
     return cards

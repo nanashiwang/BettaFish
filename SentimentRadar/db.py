@@ -106,6 +106,7 @@ _SCHEMAS = [
         evidence_summary VARCHAR(200) NOT NULL DEFAULT '',
         detail JSONB NOT NULL DEFAULT '{}',
         boards JSONB NOT NULL DEFAULT '[]',
+        stock_candidates JSONB NOT NULL DEFAULT '[]',
         heat_z DOUBLE PRECISION,
         price_z DOUBLE PRECISION,
         headline TEXT NOT NULL DEFAULT '',
@@ -141,6 +142,8 @@ _SCHEMAS = [
     """,
     # 话题补充价格 z 分（象限散点图使用）
     "ALTER TABLE radar_topics ADD COLUMN IF NOT EXISTS price_z DOUBLE PRECISION",
+    # 预判卡补充个股观察池
+    "ALTER TABLE radar_predictions ADD COLUMN IF NOT EXISTS stock_candidates JSONB NOT NULL DEFAULT '[]'",
 ]
 
 _engine: Optional[Engine] = None

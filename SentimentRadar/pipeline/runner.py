@@ -124,6 +124,18 @@ def run_pipeline(trade_date: Optional[date] = None) -> Dict[str, Any]:
             # 5. 热度与背离信号（build_signals 会把 price_z 回写到话题，再落库供散点图）
             signals.compute_heat(mapped, news, trade_date)
             signal_list = signals.build_signals(mapped, quotes_by_board)
+            stock_candidate_count = 0
+            for signal in signal_list[:6]:
+                try:
+                    candidates = quote_service.stock_candidates(
+                        signal["board"], signal.get("scenario", ""), limit=8
+                    )
+                    signal["stock_candidates"] = candidates
+                    stock_candidate_count += len(candidates)
+                except Exception as exc:
+                    logger.warning(f"个股观察池筛选失败 {signal['board']['name']}: {exc}")
+                    signal["stock_candidates"] = []
+            stats["stock_candidates"] = stock_candidate_count
             topic_extractor.save_topics(trade_date, mapped)
             stats["signals"] = len(signal_list)
             if not signal_list:

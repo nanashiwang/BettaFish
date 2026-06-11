@@ -9,7 +9,6 @@
 
         <nav class="nav">
           <router-link to="/today" active-class="active">首页</router-link>
-          <router-link to="/console" active-class="active">控制台</router-link>
           <router-link to="/history" active-class="active">复盘</router-link>
           <router-link to="/subscription" active-class="active">订阅</router-link>
           <router-link to="/account" active-class="active">账户</router-link>
@@ -33,7 +32,7 @@
                   <div class="muted">当前套餐：{{ auth.subscription?.plan_name || '-' }}</div>
                 </div>
               </el-dropdown-item>
-              <el-dropdown-item v-if="auth.isAdmin" command="admin" divided>管理后台</el-dropdown-item>
+              <el-dropdown-item v-if="auth.isAdmin" command="settings" divided>平台设置</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -63,28 +62,18 @@
           </router-link>
         </div>
 
-        <div class="side-group">
-          <div class="side-label">控制台</div>
-          <router-link to="/console" class="side-item" active-class="active">
-            <span class="side-icon">◇</span><span class="side-text">数据看板</span>
-          </router-link>
-          <button v-if="auth.isAdmin" class="side-item button-item" @click="router.push('/admin/settings')">
-            <span class="side-icon">☷</span><span class="side-text">系统接入</span>
-          </button>
-        </div>
-
         <div v-if="auth.isAdmin" class="side-group">
           <div class="side-label">管理员</div>
-          <router-link to="/admin/settings" class="side-item" active-class="active">
+          <router-link to="/settings" class="side-item" active-class="active">
             <span class="side-icon">⚙</span><span class="side-text">平台设置</span>
           </router-link>
-          <router-link to="/admin/users" class="side-item" active-class="active">
+          <router-link to="/users" class="side-item" active-class="active">
             <span class="side-icon">○</span><span class="side-text">用户管理</span>
           </router-link>
-          <router-link to="/admin/plans" class="side-item" active-class="active">
+          <router-link to="/plans" class="side-item" active-class="active">
             <span class="side-icon">▤</span><span class="side-text">订阅管理</span>
           </router-link>
-          <router-link to="/admin/audit-logs" class="side-item" active-class="active">
+          <router-link to="/audit-logs" class="side-item" active-class="active">
             <span class="side-icon">✦</span><span class="side-text">审计日志</span>
           </router-link>
         </div>
@@ -110,8 +99,8 @@ const sidebarCollapsed = ref(false)
 const avatarText = computed(() => auth.user?.name?.charAt(0) ?? '用')
 
 async function handleCommand(command: string) {
-  if (command === 'admin') {
-    router.push('/admin')
+  if (command === 'settings') {
+    router.push('/settings')
   } else if (command === 'logout') {
     await auth.logout()
     // 退出后回公开首页

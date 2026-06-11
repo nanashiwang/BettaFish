@@ -33,11 +33,6 @@ const router = createRouter({
           component: () => import('../views/today/TodayView.vue'),
         },
         {
-          path: 'console',
-          name: 'console',
-          component: () => import('../views/today/TodayView.vue'),
-        },
-        {
           path: 'history',
           name: 'history',
           component: () => import('../views/history/HistoryView.vue'),
@@ -84,6 +79,7 @@ const router = createRouter({
     { path: '/admin/users', redirect: '/users' },
     { path: '/admin/plans', redirect: '/plans' },
     { path: '/admin/audit-logs', redirect: '/audit-logs' },
+    { path: '/console', redirect: '/today' },
     {
       path: '/:pathMatch(.*)*',
       redirect: '/',

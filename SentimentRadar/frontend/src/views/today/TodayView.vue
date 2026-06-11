@@ -218,7 +218,7 @@
 
     <el-empty v-else :description="today?.headline || '暂无预判数据'">
       <p class="muted empty-hint">
-        管线尚未产出今日信号。管理员可在「管理后台 → 平台设置 → 雷达管线」中配置并立即运行。
+        管线尚未产出今日信号。管理员可在「平台设置」中配置并立即运行。
       </p>
       <el-button type="primary" :loading="refreshing" @click="loadToday(true)">刷新</el-button>
     </el-empty>
@@ -231,11 +231,10 @@
       <div>
         <span class="eyebrow">今日首页</span>
         <h1>{{ greeting }}，先看 3 件事</h1>
-        <p>{{ today?.headline || '聚合今日强信号、关注池命中与风险边界。完整工作区已放到控制台。' }}</p>
+        <p>{{ today?.headline || '聚合今日强信号、关注池命中与风险边界，少跳转、直接看结论。' }}</p>
       </div>
       <div class="hero-actions">
         <el-button :icon="Refresh" circle :loading="refreshing" @click="loadToday(true)" />
-        <el-button type="primary" @click="router.push('/console')">进入控制台</el-button>
       </div>
     </section>
 
@@ -243,7 +242,7 @@
 
     <template v-else-if="today && today.cards.length">
       <section class="quick-grid fade-up fade-up-1">
-        <div class="quick-card glass-card"><span>今日强信号</span><b class="num">{{ today.cards.length }}</b><small>完整预判卡在控制台查看</small></div>
+        <div class="quick-card glass-card"><span>今日强信号</span><b class="num">{{ today.cards.length }}</b><small>当前页面直接查看预判卡</small></div>
         <div class="quick-card glass-card"><span>我的关注命中</span><b class="num">{{ today.my_related.items[0]?.value || today.my_related.highlight || '0' }}</b><small>{{ today.my_related.summary || '股票 · 主题 · 板块' }}</small></div>
         <div class="quick-card glass-card"><span>证据样本</span><b class="num">{{ evidenceTotal.toLocaleString() }}</b><small>新闻 / 公告 / 社媒 / 行情</small></div>
       </section>
@@ -251,7 +250,7 @@
       <section class="home-grid">
         <div class="left-home">
           <div class="glass-card panel">
-            <div class="panel-head"><span>今日预判卡</span><button type="button" class="link-btn" @click="router.push('/console')">看全部 →</button></div>
+            <div class="panel-head"><span>今日预判卡</span></div>
             <div class="panel-body card-grid"><PredictionCard v-for="card in topCards" :key="card.id" :card="card" @view-evidence="openDrawer" /></div>
           </div>
         </div>
@@ -269,7 +268,7 @@
     </template>
 
     <el-empty v-else :description="today?.headline || '暂无预判数据'">
-      <p class="muted empty-hint">管线尚未产出今日信号，可到控制台检查配置与运行状态。</p>
+      <p class="muted empty-hint">管线尚未产出今日信号，管理员可在「平台设置」中配置并运行。</p>
       <el-button type="primary" :loading="refreshing" @click="loadToday(true)">刷新</el-button>
     </el-empty>
     <EvidenceDrawer v-model="drawerVisible" :card-id="activeCardId" />
@@ -278,7 +277,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 import { fetchToday } from '../../api/radar'
 import type { TodayBriefing } from '../../api/types'
@@ -291,7 +290,6 @@ import QuadrantChart from '../../components/charts/QuadrantChart.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
-const router = useRouter()
 const today = ref<TodayBriefing | null>(null)
 const todayLoading = ref(true)
 const refreshing = ref(false)

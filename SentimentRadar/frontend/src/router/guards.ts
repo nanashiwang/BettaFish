@@ -21,7 +21,7 @@ export function setupGuards(router: Router) {
       return { path: '/login', query: { redirect: to.fullPath } }
     }
 
-    // 管理后台需要 admin / super_admin 角色
+    // 管理员功能需要 admin / super_admin 角色
     if (to.matched.some((record) => record.meta.requiresAdmin) && !auth.isAdmin) {
       ElMessage.warning('无管理员权限')
       return '/today'

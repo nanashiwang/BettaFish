@@ -40,7 +40,7 @@ http.interceptors.response.use(
     } else if (status === 403) {
       ElMessage.error(error.response?.data?.message || '无访问权限')
       const { default: router } = await import('../router')
-      if (router.currentRoute.value.path.startsWith('/admin')) {
+      if (['/settings', '/users', '/plans', '/audit-logs'].includes(router.currentRoute.value.path)) {
         router.replace('/today')
       }
     } else if (!silent) {

@@ -1,5 +1,5 @@
 <template>
-  <div class="today-dashboard">
+  <div v-if="isConsole" class="today-dashboard">
     <section class="hero-row fade-up">
       <div>
         <h1>🪼 {{ greeting }}，{{ auth.user?.name || 'nanashiwang' }}</h1>
@@ -30,22 +30,28 @@
           <div class="glass-card panel signal-panel fade-up fade-up-2">
             <div class="panel-head">
               <span>今日信号</span>
-              <div class="panel-tabs">
-                <b>预判卡</b>
-                <span>/ 热度排序</span>
-                <span>/ 背离象限</span>
-                <span>/ 证据链</span>
+              <div class="panel-tabs" role="tablist" aria-label="今日信号视图">
+                <button
+                  v-for="tab in signalTabs"
+                  :key="tab.value"
+                  type="button"
+                  :class="{ active: activeSignalTab === tab.value }"
+                  :aria-selected="activeSignalTab === tab.value"
+                  @click="activeSignalTab = tab.value"
+                >
+                  {{ tab.label }}
+                </button>
               </div>
             </div>
             <div class="panel-body">
               <div class="section-row">
                 <div>
-                  <h2>舆情-价格背离 Top{{ today.cards.length }}</h2>
-                  <p class="muted">{{ today.headline }}</p>
+                  <h2>{{ activeSignalMeta.title }}</h2>
+                  <p class="muted">{{ activeSignalMeta.description }}</p>
                 </div>
-                <span class="blue-badge">优先放在左侧主视窗</span>
+                <span class="blue-badge">{{ activeSignalMeta.badge }}</span>
               </div>
-              <div class="prediction-grid">
+              <div v-if="activeSignalTab === 'cards'" class="prediction-grid">
                 <PredictionCard
                   v-for="(card, index) in today.cards"
                   :key="card.id"
@@ -54,6 +60,39 @@
                   :class="`fade-up-${index + 1}`"
                   @view-evidence="openDrawer"
                 />
+              </div>
+
+              <div v-else-if="activeSignalTab === 'heat'" class="heat-list">
+                <button v-for="card in heatSortedCards" :key="card.id" type="button" class="heat-row" @click="openDrawer(card.id)">
+                  <span class="heat-rank num">#{{ card.rank }}</span>
+                  <span class="heat-main"><strong>{{ card.title }}</strong><small>{{ card.scenario }} · {{ card.evidence }}</small></span>
+                  <span class="heat-score"><b class="num">{{ formatZ(card.heat_z) }}</b><small>热度 z</small></span>
+                  <span class="heat-score"><b class="num">{{ formatZ(card.price_z) }}</b><small>价格 z</small></span>
+                </button>
+              </div>
+
+              <div v-else-if="activeSignalTab === 'quadrant'" class="quadrant-workbench">
+                <QuadrantChart :points="quadrantPoints" />
+                <div class="quadrant-stat-grid">
+                  <div v-for="stat in quadrantStats" :key="stat.label" class="quadrant-stat">
+                    <span>{{ stat.label }}</span><b class="num">{{ stat.value }}</b><small>{{ stat.text }}</small>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="evidence-workbench">
+                <div class="evidence-summary">
+                  <div v-for="item in today.evidence_overview" :key="item.name" class="evidence-tile">
+                    <span>{{ item.name }}</span><b class="num">{{ item.count.toLocaleString() }}</b>
+                  </div>
+                </div>
+                <div class="evidence-card-list">
+                  <button v-for="card in today.cards" :key="card.id" type="button" class="evidence-card-row" @click="openDrawer(card.id)">
+                    <span class="heat-rank num">#{{ card.rank }}</span>
+                    <span class="heat-main"><strong>{{ card.title }}</strong><small>{{ card.reason }}</small></span>
+                    <span class="evidence-pill">{{ card.evidence }}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -162,7 +201,7 @@
 
           <div class="glass-card side-panel chart-panel fade-up fade-up-4">
             <div class="panel-head"><span>信号象限图</span></div>
-            <QuadrantChart :points="today.signals_scatter" />
+            <QuadrantChart :points="quadrantPoints" />
             <p class="faint quadrant-hint">左上为「先闻后动」机会区：舆情升温而板块未动。</p>
           </div>
 
@@ -186,10 +225,60 @@
 
     <EvidenceDrawer v-model="drawerVisible" :card-id="activeCardId" />
   </div>
+
+  <div v-else class="today-home">
+    <section class="home-hero glass-card fade-up">
+      <div>
+        <span class="eyebrow">今日首页</span>
+        <h1>{{ greeting }}，先看 3 件事</h1>
+        <p>{{ today?.headline || '聚合今日强信号、关注池命中与风险边界。完整工作区已放到控制台。' }}</p>
+      </div>
+      <div class="hero-actions">
+        <el-button :icon="Refresh" circle :loading="refreshing" @click="loadToday(true)" />
+        <el-button type="primary" @click="router.push('/console')">进入控制台</el-button>
+      </div>
+    </section>
+
+    <div v-if="todayLoading" v-loading="true" class="loading-block glass-card" />
+
+    <template v-else-if="today && today.cards.length">
+      <section class="quick-grid fade-up fade-up-1">
+        <div class="quick-card glass-card"><span>今日强信号</span><b class="num">{{ today.cards.length }}</b><small>完整预判卡在控制台查看</small></div>
+        <div class="quick-card glass-card"><span>我的关注命中</span><b class="num">{{ today.my_related.items[0]?.value || today.my_related.highlight || '0' }}</b><small>{{ today.my_related.summary || '股票 · 主题 · 板块' }}</small></div>
+        <div class="quick-card glass-card"><span>证据样本</span><b class="num">{{ evidenceTotal.toLocaleString() }}</b><small>新闻 / 公告 / 社媒 / 行情</small></div>
+      </section>
+
+      <section class="home-grid">
+        <div class="left-home">
+          <div class="glass-card panel">
+            <div class="panel-head"><span>今日预判卡</span><button type="button" class="link-btn" @click="router.push('/console')">看全部 →</button></div>
+            <div class="panel-body card-grid"><PredictionCard v-for="card in topCards" :key="card.id" :card="card" @view-evidence="openDrawer" /></div>
+          </div>
+        </div>
+        <aside class="right-home">
+          <div class="glass-card panel">
+            <div class="panel-head"><span>我的关注</span><button type="button" class="link-btn" @click="showSettings = !showSettings">管理</button></div>
+            <div class="panel-body"><MyFocusPanel @go-settings="showSettings = true" /></div>
+          </div>
+          <details class="glass-card panel settings-fold" :open="showSettings">
+            <summary @click.prevent="showSettings = !showSettings">关注管理 / 推送提醒</summary>
+            <div class="panel-body"><SettingsPanel /></div>
+          </details>
+        </aside>
+      </section>
+    </template>
+
+    <el-empty v-else :description="today?.headline || '暂无预判数据'">
+      <p class="muted empty-hint">管线尚未产出今日信号，可到控制台检查配置与运行状态。</p>
+      <el-button type="primary" :loading="refreshing" @click="loadToday(true)">刷新</el-button>
+    </el-empty>
+    <EvidenceDrawer v-model="drawerVisible" :card-id="activeCardId" />
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 import { fetchToday } from '../../api/radar'
 import type { TodayBriefing } from '../../api/types'
@@ -201,12 +290,35 @@ import SettingsPanel from '../../components/today/SettingsPanel.vue'
 import QuadrantChart from '../../components/charts/QuadrantChart.vue'
 
 const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 const today = ref<TodayBriefing | null>(null)
 const todayLoading = ref(true)
 const refreshing = ref(false)
 const drawerVisible = ref(false)
 const activeCardId = ref('')
-const showSettings = ref(false)
+const showSettings = ref(route.query.tab === 'my')
+type SignalTab = 'cards' | 'heat' | 'quadrant' | 'evidence'
+type CompatibleScatterPoint = {
+  name: string
+  code: string
+  label: string
+  topic: string
+  scenario: string
+  heat_z: number
+  price_z: number
+  return_3d: number | null
+  return_5d: number | null
+  volume_ratio: number
+}
+const activeSignalTab = ref<SignalTab>('cards')
+const signalTabs: { label: string; value: SignalTab }[] = [
+  { label: '预判卡', value: 'cards' },
+  { label: '热度排序', value: 'heat' },
+  { label: '背离象限', value: 'quadrant' },
+  { label: '证据链', value: 'evidence' },
+]
+const isConsole = computed(() => route.name === 'console')
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -222,6 +334,46 @@ const updatedTime = computed(() => {
 
 const evidenceTotal = computed(() => (
   today.value?.evidence_overview.reduce((sum, item) => sum + item.count, 0) ?? 0
+))
+
+const topCards = computed(() => today.value?.cards.slice(0, 2) ?? [])
+
+const heatSortedCards = computed(() => (
+  [...(today.value?.cards ?? [])].sort((a, b) => (b.heat_z ?? -999) - (a.heat_z ?? -999))
+))
+
+const activeSignalMeta = computed(() => {
+  const total = today.value?.cards.length ?? 0
+  const meta: Record<SignalTab, { title: string; description: string; badge: string }> = {
+    cards: { title: `舆情-价格背离 Top${total}`, description: today.value?.headline || '今日强信号预判卡', badge: '主视窗' },
+    heat: { title: '热度排序', description: '按舆情热度 z 分倒序排列，点击行可展开证据链。', badge: '可点击' },
+    quadrant: { title: '背离象限', description: '横轴价格、纵轴热度，优先关注左上「先闻后动」机会区。', badge: '象限视图' },
+    evidence: { title: '证据链', description: '按信号聚合新闻、公告、社媒与行情证据，点击查看详情。', badge: '来源追踪' },
+  }
+  return meta[activeSignalTab.value]
+})
+
+const quadrantStats = computed(() => {
+  const points = today.value?.signals_scatter ?? []
+  return [
+    { label: '机会区', value: points.filter((p) => p.heat_z > 0 && p.price_z < 0).length, text: '热度先行' },
+    { label: '共振区', value: points.filter((p) => p.heat_z > 0 && p.price_z > 0).length, text: '热价同步' },
+    { label: '警惕区', value: points.filter((p) => p.heat_z < 0 && p.price_z > 0).length, text: '价格先动' },
+  ]
+})
+
+
+const quadrantPoints = computed<CompatibleScatterPoint[]>(() => (
+  today.value?.signals_scatter.map((point) => ({
+    ...point,
+    code: point.name,
+    label: point.scenario === '先动后闻' ? '高位风险' : point.scenario === '先闻后动' ? '补涨观察' : '观察',
+    topic: point.name,
+    scenario: point.scenario || '无显著信号',
+    return_3d: point.price_z,
+    return_5d: null,
+    volume_ratio: 1,
+  })) ?? []
 ))
 
 const metricCards = computed(() => {
@@ -272,6 +424,11 @@ async function loadToday(isRefresh = false) {
 function openDrawer(cardId: string) {
   activeCardId.value = cardId
   drawerVisible.value = true
+}
+
+function formatZ(value?: number | null) {
+  if (value == null) return '-'
+  return value > 0 ? `+${value}` : `${value}`
 }
 
 onMounted(() => loadToday())
@@ -407,14 +564,34 @@ onMounted(() => loadToday())
 
 .panel-tabs {
   display: flex;
-  gap: 12px;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 650;
+  gap: 6px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel);
+  overflow-x: auto;
+  max-width: 100%;
 }
 
-.panel-tabs b {
+.panel-tabs button {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.panel-tabs button:hover,
+.panel-tabs button.active {
   color: var(--text-primary);
+  background: linear-gradient(135deg, rgba(59, 164, 247, 0.2), rgba(45, 212, 191, 0.14));
+  box-shadow: inset 0 0 0 1px rgba(59, 164, 247, 0.38);
 }
 
 .panel-body {
@@ -454,6 +631,38 @@ onMounted(() => loadToday())
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
+
+
+.heat-list,
+.evidence-card-list { display: grid; gap: 10px; }
+.heat-row,
+.evidence-card-row { width: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr) 86px 86px; gap: 12px; align-items: center; min-height: 72px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel); color: var(--text-secondary); cursor: pointer; text-align: left; }
+.heat-row:hover,
+.evidence-card-row:hover { border-color: rgba(59, 164, 247, 0.45); background: var(--bg-hover); }
+.heat-rank { color: var(--brand); font-size: 20px; font-weight: 900; }
+.heat-main { min-width: 0; }
+.heat-main strong,
+.heat-main small,
+.heat-score small { display: block; }
+.heat-main strong { overflow: hidden; color: var(--text-primary); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.heat-main small,
+.heat-score small { margin-top: 4px; color: var(--text-faint); font-size: 12px; }
+.heat-score { padding: 8px 10px; border-radius: 10px; background: rgba(59, 164, 247, 0.08); text-align: right; }
+.heat-score b { color: var(--text-primary); font-size: 18px; }
+.quadrant-workbench { display: grid; gap: 14px; }
+.quadrant-workbench :deep(.quadrant-chart) { height: 360px; }
+.quadrant-stat-grid,
+.evidence-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.quadrant-stat,
+.evidence-tile { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel); }
+.quadrant-stat span,
+.evidence-tile span,
+.quadrant-stat small { display: block; color: var(--text-muted); font-size: 12px; }
+.quadrant-stat b,
+.evidence-tile b { display: block; margin: 5px 0 2px; color: var(--text-primary); font-size: 24px; }
+.evidence-workbench { display: grid; gap: 14px; }
+.evidence-card-row { grid-template-columns: 56px minmax(0, 1fr) auto; }
+.evidence-pill { justify-self: end; padding: 5px 9px; border: 1px solid rgba(45, 212, 191, 0.24); border-radius: 999px; color: var(--brand-secondary); background: rgba(45, 212, 191, 0.1); font-size: 12px; white-space: nowrap; }
 
 .focus-panel :deep(.head-line) {
   display: none;
@@ -707,8 +916,37 @@ onMounted(() => loadToday())
   }
 
   .metric-grid,
-  .prediction-grid {
+  .prediction-grid,
+  .quadrant-stat-grid,
+  .evidence-summary {
     grid-template-columns: 1fr;
   }
+
+  .panel-head { align-items: flex-start; flex-direction: column; padding: 12px 16px; }
+
+  .heat-row,
+  .evidence-card-row { grid-template-columns: 44px minmax(0, 1fr); }
+
+  .heat-score,
+  .evidence-pill { grid-column: 2; justify-self: start; text-align: left; }
 }
+
+/* 首页精简视图 */
+.today-home { display: grid; gap: 16px; }
+.home-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 22px; overflow: hidden; background: radial-gradient(circle at 84% 16%, rgba(59, 164, 247, 0.18), transparent 34%), linear-gradient(135deg, rgba(21, 30, 45, 0.96), rgba(16, 24, 38, 0.9)); }
+.eyebrow { color: var(--brand-secondary); font-size: 12px; font-weight: 900; letter-spacing: 0.08em; }
+.home-hero h1 { margin: 8px 0 8px; font-size: 28px; }
+.home-hero p { max-width: 720px; margin: 0; color: var(--text-muted); line-height: 1.7; }
+.quick-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.quick-card { min-height: 116px; padding: 18px; background: var(--bg-elevated); }
+.quick-card span, .quick-card small { display: block; color: var(--text-muted); font-size: 13px; }
+.quick-card b { display: block; margin: 8px 0 4px; color: var(--text-primary); font-size: 32px; }
+.home-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr); gap: 16px; align-items: start; }
+.left-home, .right-home { display: grid; gap: 16px; }
+.card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.link-btn { border: 0; background: transparent; color: var(--brand); cursor: pointer; font: inherit; font-size: 13px; font-weight: 800; }
+.right-home :deep(.head-line) { display: none; }
+@media (max-width: 1080px) { .home-grid, .quick-grid, .card-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .home-hero { align-items: flex-start; flex-direction: column; } .hero-actions { width: 100%; justify-content: space-between; } }
+
 </style>

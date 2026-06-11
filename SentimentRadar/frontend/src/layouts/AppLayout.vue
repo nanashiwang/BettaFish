@@ -9,7 +9,8 @@
 
         <nav class="nav">
           <router-link to="/today" active-class="active">首页</router-link>
-          <router-link to="/history" active-class="active">控制台</router-link>
+          <router-link to="/console" active-class="active">控制台</router-link>
+          <router-link to="/history" active-class="active">复盘</router-link>
           <router-link to="/subscription" active-class="active">订阅</router-link>
           <router-link to="/account" active-class="active">账户</router-link>
         </nav>
@@ -40,53 +41,52 @@
       </div>
     </header>
 
-    <div class="body-shell">
-      <aside class="sidebar">
+    <div class="body-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+      <aside class="sidebar" :class="{ collapsed: sidebarCollapsed }">
+        <div class="sidebar-head">
+          <span class="rail-title">雷达导航</span>
+          <button class="collapse-toggle" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" @click="sidebarCollapsed = !sidebarCollapsed">
+            {{ sidebarCollapsed ? '›' : '‹' }}
+          </button>
+        </div>
+
         <div class="side-group">
           <div class="side-label">工作台</div>
           <router-link to="/today" class="side-item" active-class="active">
-            <span>▣</span>今日信号
+            <span class="side-icon">▣</span><span class="side-text">今日信号</span>
           </router-link>
           <router-link to="/today?tab=my" class="side-item">
-            <span>★</span>我的关注
+            <span class="side-icon">★</span><span class="side-text">我的关注</span>
           </router-link>
           <router-link to="/history" class="side-item" active-class="active">
-            <span>⌁</span>历史复盘
+            <span class="side-icon">⌁</span><span class="side-text">历史复盘</span>
           </router-link>
         </div>
 
         <div class="side-group">
           <div class="side-label">控制台</div>
-          <router-link to="/history" class="side-item">
-            <span>◇</span>数据看板
+          <router-link to="/console" class="side-item" active-class="active">
+            <span class="side-icon">◇</span><span class="side-text">数据看板</span>
           </router-link>
           <button v-if="auth.isAdmin" class="side-item button-item" @click="router.push('/admin/settings')">
-            <span>⚙</span>管线配置
-          </button>
-          <button v-if="auth.isAdmin" class="side-item button-item" @click="router.push('/admin/settings')">
-            <span>☷</span>系统接入
+            <span class="side-icon">☷</span><span class="side-text">系统接入</span>
           </button>
         </div>
 
         <div v-if="auth.isAdmin" class="side-group">
           <div class="side-label">管理员</div>
-          <button class="side-item button-item" @click="router.push('/admin/users')">
-            <span>○</span>用户管理
-          </button>
-          <button class="side-item button-item" @click="router.push('/admin/plans')">
-            <span>▤</span>订阅管理
-          </button>
-          <button class="side-item button-item" @click="router.push('/admin/audit-logs')">
-            <span>✦</span>审计日志
-          </button>
-        </div>
-
-        <div class="system-mini">
-          <div class="system-title">系统状态</div>
-          <div class="system-row"><span>AI 服务</span><b>正常</b></div>
-          <div class="system-row"><span>行情服务</span><b>正常</b></div>
-          <div class="system-row"><span>数据库</span><b>正常</b></div>
-          <div class="system-row faint"><span>更新时间</span><span>16:35:28</span></div>
+          <router-link to="/admin/settings" class="side-item" active-class="active">
+            <span class="side-icon">⚙</span><span class="side-text">平台设置</span>
+          </router-link>
+          <router-link to="/admin/users" class="side-item" active-class="active">
+            <span class="side-icon">○</span><span class="side-text">用户管理</span>
+          </router-link>
+          <router-link to="/admin/plans" class="side-item" active-class="active">
+            <span class="side-icon">▤</span><span class="side-text">订阅管理</span>
+          </router-link>
+          <router-link to="/admin/audit-logs" class="side-item" active-class="active">
+            <span class="side-icon">✦</span><span class="side-text">审计日志</span>
+          </router-link>
         </div>
       </aside>
 
@@ -98,13 +98,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
+const sidebarCollapsed = ref(false)
 
 const avatarText = computed(() => auth.user?.name?.charAt(0) ?? '用')
 
@@ -253,20 +254,65 @@ async function handleCommand(command: string) {
 
 .body-shell {
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
+  grid-template-columns: 176px minmax(0, 1fr);
   min-height: calc(100vh - 56px);
+  transition: grid-template-columns 0.22s ease;
+}
+
+.body-shell.sidebar-collapsed {
+  grid-template-columns: 70px minmax(0, 1fr);
 }
 
 .sidebar {
   position: sticky;
   top: 56px;
   height: calc(100vh - 56px);
-  padding: 22px 10px 14px;
+  padding: 14px 10px;
   border-right: 1px solid var(--border);
   background: rgba(10, 15, 26, 0.9);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidebar-head {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 0 8px;
+}
+
+.rail-title {
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.collapse-toggle {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.collapse-toggle:hover {
+  color: var(--brand);
+  border-color: rgba(59, 164, 247, 0.45);
+  background: var(--bg-hover);
+}
+
+.side-group {
+  display: grid;
+  gap: 6px;
 }
 
 .side-label {
@@ -288,6 +334,20 @@ async function handleCommand(command: string) {
   text-decoration: none;
   font-size: 14px;
   font-weight: 700;
+  white-space: nowrap;
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.side-icon {
+  width: 18px;
+  flex: 0 0 18px;
+  text-align: center;
+  color: inherit;
+}
+
+.side-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .side-item:hover,
@@ -304,30 +364,21 @@ async function handleCommand(command: string) {
   background: transparent;
 }
 
-.system-mini {
-  margin-top: auto;
-  padding: 14px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-panel);
+.sidebar.collapsed .rail-title,
+.sidebar.collapsed .side-label,
+.sidebar.collapsed .side-text,
+.sidebar.collapsed .system-mini {
+  display: none;
 }
 
-.system-title {
-  margin-bottom: 9px;
-  font-size: 13px;
-  font-weight: 800;
+.sidebar.collapsed .sidebar-head {
+  justify-content: center;
+  padding: 0;
 }
 
-.system-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.system-row b {
-  color: var(--down);
+.sidebar.collapsed .side-item {
+  justify-content: center;
+  padding: 0;
 }
 
 @media (max-width: 960px) {
@@ -335,8 +386,54 @@ async function handleCommand(command: string) {
     grid-template-columns: 1fr;
   }
 
+  .body-shell.sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
   .sidebar {
+    position: sticky;
+    top: 56px;
+    z-index: 8;
+    height: auto;
+    min-width: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+
+  .sidebar-head,
+  .side-group {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  .rail-title,
+  .side-label,
+  .system-mini {
     display: none;
+  }
+
+  .side-item,
+  .sidebar.collapsed .side-item {
+    width: auto;
+    min-width: max-content;
+    justify-content: flex-start;
+    padding: 0 12px;
+  }
+
+  .sidebar.collapsed .side-text {
+    display: inline;
+  }
+
+  .sidebar.collapsed .sidebar-head {
+    justify-content: flex-start;
   }
 
   .nav {

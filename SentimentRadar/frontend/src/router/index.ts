@@ -33,6 +33,11 @@ const router = createRouter({
           component: () => import('../views/today/TodayView.vue'),
         },
         {
+          path: 'history',
+          name: 'history',
+          component: () => import('../views/history/HistoryView.vue'),
+        },
+        {
           path: 'subscription',
           name: 'subscription',
           component: () => import('../views/subscription/SubscriptionView.vue'),

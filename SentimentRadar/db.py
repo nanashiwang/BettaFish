@@ -128,6 +128,19 @@ _SCHEMAS = [
         stats JSONB NOT NULL DEFAULT '{}'
     )
     """,
+    # 用户关注（股票/主题/板块）
+    """
+    CREATE TABLE IF NOT EXISTS radar_watchlist (
+        id SERIAL PRIMARY KEY,
+        user_email VARCHAR(255) NOT NULL,
+        item_type VARCHAR(16) NOT NULL,
+        name VARCHAR(64) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE (user_email, item_type, name)
+    )
+    """,
+    # 话题补充价格 z 分（象限散点图使用）
+    "ALTER TABLE radar_topics ADD COLUMN IF NOT EXISTS price_z DOUBLE PRECISION",
 ]
 
 _engine: Optional[Engine] = None

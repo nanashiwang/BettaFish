@@ -16,12 +16,19 @@
     <section class="hero">
       <h1>每天 3 条，看懂 A 股舆情主线</h1>
       <p class="hero-sub">
-        聚合新闻、公告、社媒与行情异动，AI 给出当日最值得关注的 3 条舆情预判，
-        每条都附完整证据链与风险边界。
+        聚合新闻、公告、社媒与行情异动，当舆论起来而板块还没动时，
+        雷达会第一时间给出「先闻后动」信号，每条都附完整证据链与风险边界。
       </p>
       <div class="hero-actions">
         <el-button type="primary" size="large" @click="router.push('/register')">免费注册</el-button>
         <el-button size="large" @click="scrollToSample">查看预判样例</el-button>
+      </div>
+      <!-- 数字滚动 -->
+      <div class="hero-stats">
+        <div v-for="stat in heroStats" :key="stat.label" class="hero-stat">
+          <div class="stat-value num">{{ stat.display }}<small>{{ stat.suffix }}</small></div>
+          <div class="stat-label">{{ stat.label }}</div>
+        </div>
       </div>
       <p class="hero-disclaimer">仅供舆情观察 · 不构成投资建议</p>
     </section>
@@ -74,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { DataAnalysis, Link, WarnTriangleFilled, Lock } from '@element-plus/icons-vue'
 import PredictionCard from '../components/today/PredictionCard.vue'
@@ -86,6 +93,27 @@ const sampleSection = ref<HTMLElement | null>(null)
 function scrollToSample() {
   sampleSection.value?.scrollIntoView({ behavior: 'smooth' })
 }
+
+// 数字滚动动效
+const heroStats = reactive([
+  { label: '数据平台', target: 11, suffix: ' 个', display: '0' },
+  { label: '每日热点', target: 300, suffix: '+', display: '0' },
+  { label: '每日精选信号', target: 3, suffix: ' 条', display: '0' },
+])
+
+onMounted(() => {
+  const duration = 1200
+  const start = performance.now()
+  function tick(now: number) {
+    const progress = Math.min(1, (now - start) / duration)
+    const eased = 1 - Math.pow(1 - progress, 3)
+    heroStats.forEach((stat) => {
+      stat.display = Math.round(stat.target * eased).toString()
+    })
+    if (progress < 1) requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+})
 
 const FEATURES = [
   {
@@ -152,7 +180,7 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 <style scoped>
 .home-page {
   min-height: 100vh;
-  background: #fff;
+  background: var(--bg-page);
 }
 
 .home-topbar {
@@ -163,9 +191,10 @@ const SAMPLE_CARDS: PredictionCardType[] = [
   padding: 0 32px;
   position: sticky;
   top: 0;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid #eef2f5;
+  background: rgba(10, 15, 26, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--glass-border);
   z-index: 10;
 }
 
@@ -178,13 +207,15 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 .logo {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  background: var(--radar-brand);
-  color: #fff;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--brand), #0d9488);
+  color: #04211d;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 17px;
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.3);
 }
 
 .brand-name {
@@ -194,27 +225,28 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 
 .hero {
   text-align: center;
-  padding: 88px 24px 72px;
-  background: linear-gradient(160deg, #0a3744 0%, #176b87 55%, #2d9596 100%);
-  color: #fff;
+  padding: 96px 24px 72px;
+  background:
+    radial-gradient(700px 400px at 50% 0%, rgba(45, 212, 191, 0.1), transparent 65%),
+    linear-gradient(170deg, #0a0f1a 0%, #0d1b2a 60%, #0a0f1a 100%);
+  color: var(--text-primary);
   position: relative;
   overflow: hidden;
 }
 
-/* 漂浮光斑：让品牌渐变更有层次 */
+/* 漂浮光斑 */
 .hero::before {
   content: '';
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(460px 460px at 15% 25%, rgba(116, 199, 199, 0.4), transparent 65%),
-    radial-gradient(560px 560px at 88% 80%, rgba(255, 196, 110, 0.18), transparent 60%),
-    radial-gradient(320px 320px at 75% 10%, rgba(45, 149, 150, 0.5), transparent 65%);
-  filter: blur(12px);
+    radial-gradient(460px 460px at 15% 25%, rgba(45, 212, 191, 0.12), transparent 65%),
+    radial-gradient(560px 560px at 88% 80%, rgba(129, 140, 248, 0.12), transparent 60%);
+  filter: blur(14px);
   animation: hero-drift 18s ease-in-out infinite alternate;
 }
 
-/* 雷达扫描环：呼应产品主题 */
+/* 雷达扫描环 */
 .hero::after {
   content: '';
   position: absolute;
@@ -225,8 +257,8 @@ const SAMPLE_CARDS: PredictionCardType[] = [
   margin-left: -380px;
   border-radius: 50%;
   background:
-    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.09) 0 1px, transparent 1px 76px),
-    conic-gradient(from 0deg, rgba(116, 199, 199, 0.22), transparent 75deg, transparent 360deg);
+    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 76px),
+    conic-gradient(from 0deg, rgba(45, 212, 191, 0.16), transparent 75deg, transparent 360deg);
   animation: hero-radar 16s linear infinite;
   pointer-events: none;
 }
@@ -253,8 +285,12 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 
 .hero h1 {
   margin: 0 0 18px;
-  font-size: 38px;
+  font-size: 40px;
   letter-spacing: 1px;
+  background: linear-gradient(120deg, #e7edf6 30%, var(--brand) 70%, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .hero-sub {
@@ -262,7 +298,7 @@ const SAMPLE_CARDS: PredictionCardType[] = [
   margin: 0 auto 32px;
   font-size: 16px;
   line-height: 1.8;
-  opacity: 0.92;
+  color: var(--text-secondary);
 }
 
 .hero-actions {
@@ -271,10 +307,37 @@ const SAMPLE_CARDS: PredictionCardType[] = [
   gap: 14px;
 }
 
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 56px;
+  margin-top: 44px;
+}
+
+.hero-stat .stat-value {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--brand);
+  text-shadow: 0 0 24px rgba(45, 212, 191, 0.4);
+}
+
+.hero-stat .stat-value small {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+.hero-stat .stat-label {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
 .hero-disclaimer {
-  margin-top: 26px;
+  margin-top: 30px;
   font-size: 12px;
-  opacity: 0.7;
+  color: var(--text-faint);
 }
 
 .section-inner {
@@ -284,12 +347,7 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 }
 
 .features {
-  padding: 72px 0;
-  /* 柔和过渡到样例区的浅色背景 */
-  background:
-    radial-gradient(600px 280px at 12% 0%, rgba(45, 149, 150, 0.08), transparent 70%),
-    radial-gradient(600px 280px at 88% 100%, rgba(23, 107, 135, 0.07), transparent 70%),
-    linear-gradient(180deg, #fff 0%, #f7fafb 100%);
+  padding: 76px 0;
 }
 
 .features h2,
@@ -300,16 +358,26 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 }
 
 .feature-card {
-  border-radius: 14px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
   text-align: center;
-  padding: 12px 8px;
+  padding: 28px 20px;
   height: 100%;
   margin-bottom: 16px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
 }
 
 .feature-icon {
-  color: var(--radar-brand);
-  margin-bottom: 10px;
+  color: var(--brand);
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 12px rgba(45, 212, 191, 0.4));
 }
 
 .feature-card h3 {
@@ -320,13 +388,13 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 .feature-card p {
   margin: 0;
   font-size: 13px;
-  color: #475669;
+  color: var(--text-secondary);
   line-height: 1.8;
 }
 
 .sample-preview {
   padding: 64px 0 80px;
-  background: var(--radar-bg);
+  background: rgba(255, 255, 255, 0.015);
 }
 
 .sample-sub {
@@ -356,8 +424,8 @@ const SAMPLE_CARDS: PredictionCardType[] = [
   justify-content: flex-end;
   gap: 12px;
   padding-bottom: 28px;
-  background: linear-gradient(transparent, rgba(244, 247, 249, 0.96) 62%);
-  color: var(--radar-brand);
+  background: linear-gradient(transparent, rgba(10, 15, 26, 0.96) 62%);
+  color: var(--brand);
 }
 
 .sample-mask p {
@@ -369,8 +437,8 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 .home-footer {
   text-align: center;
   padding: 36px 24px 44px;
-  border-top: 1px solid #eef2f5;
-  color: #8492a6;
+  border-top: 1px solid var(--glass-border);
+  color: var(--text-faint);
   font-size: 13px;
 }
 

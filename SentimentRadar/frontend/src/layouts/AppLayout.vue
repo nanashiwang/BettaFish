@@ -5,12 +5,13 @@
         <div class="logo">雷</div>
         <div>
           <div class="brand-title">A 股舆情雷达</div>
-          <div class="brand-sub">极简预判版</div>
+          <div class="brand-sub muted">舆情 × 行情 背离信号</div>
         </div>
       </router-link>
 
       <nav class="nav">
-        <router-link to="/today" active-class="active">今日预判</router-link>
+        <router-link to="/today" active-class="active">今日信号</router-link>
+        <router-link to="/history" active-class="active">信号历史</router-link>
         <router-link to="/subscription" active-class="active">订阅</router-link>
         <router-link to="/account" active-class="active">账户</router-link>
       </nav>
@@ -40,7 +41,7 @@
       <router-view />
     </main>
 
-    <footer class="footer muted">仅供舆情观察 · 不构成投资建议</footer>
+    <footer class="footer faint">仅供舆情观察 · 不构成投资建议</footer>
   </div>
 </template>
 
@@ -74,9 +75,11 @@ async function handleCommand(command: string) {
 }
 
 .topbar {
-  height: 60px;
-  background: #fff;
-  border-bottom: 1px solid #e4e9ef;
+  height: 62px;
+  background: rgba(10, 15, 26, 0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   gap: 32px;
@@ -97,13 +100,15 @@ async function handleCommand(command: string) {
 .logo {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  background: var(--radar-brand);
-  color: #fff;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--brand), #0d9488);
+  color: #04211d;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 17px;
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.3);
 }
 
 .brand-title {
@@ -112,32 +117,45 @@ async function handleCommand(command: string) {
 }
 
 .brand-sub {
-  font-size: 12px;
-  color: #8492a6;
+  font-size: 11px;
 }
 
 .nav {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex: 1;
 }
 
 .nav a {
+  position: relative;
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   text-decoration: none;
-  color: #475669;
+  color: var(--text-secondary);
   font-size: 14px;
+  transition: color 0.2s ease, background 0.2s ease;
 }
 
 .nav a:hover {
-  background: #f0f5f7;
+  color: var(--text-primary);
+  background: var(--glass-bg);
 }
 
 .nav a.active {
-  background: #e9f6f6;
-  color: var(--radar-brand);
+  color: var(--brand);
   font-weight: 600;
+}
+
+.nav a.active::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--brand);
+  box-shadow: 0 0 8px var(--brand);
 }
 
 .user-trigger {
@@ -145,10 +163,12 @@ async function handleCommand(command: string) {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  color: var(--text-primary);
 }
 
 .avatar {
-  background: var(--radar-brand);
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  color: #04211d;
 }
 
 .user-name {
@@ -162,5 +182,6 @@ async function handleCommand(command: string) {
 .footer {
   text-align: center;
   padding: 18px 0 26px;
+  font-size: 12px;
 }
 </style>

@@ -77,20 +77,20 @@ async function load() {
 .summary {
   font-size: 13px;
   line-height: 1.7;
-  color: #475669;
+  color: var(--text-secondary);
 }
 
 h4 {
   margin: 18px 0 8px;
   font-size: 14px;
-  color: var(--radar-brand);
+  color: var(--brand);
 }
 
 .plain-list {
   margin: 0;
   padding-left: 18px;
   font-size: 13px;
-  color: #475669;
+  color: var(--text-secondary);
   line-height: 1.8;
 }
 

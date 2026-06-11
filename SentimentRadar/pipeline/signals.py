@@ -96,7 +96,7 @@ def strength_label(heat_z: float, price_z: float) -> str:
 
 
 def build_signals(topics: List[Dict[str, Any]], quotes_by_board: Dict[str, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
-    """组合话题热度与板块价格指标，产出排序后的信号列表。"""
+    """组合话题热度与板块价格指标，产出排序后的信号列表；同时把 price_z 回写到话题（供散点图）。"""
     signals = []
     for topic in topics:
         boards = topic.get("boards") or []
@@ -111,6 +111,7 @@ def build_signals(topics: List[Dict[str, Any]], quotes_by_board: Dict[str, List[
         if not metrics_list:
             continue
         board, metrics = min(metrics_list, key=lambda pair: pair[1]["price_z"])
+        topic["price_z"] = metrics["price_z"]
         scenario = classify(topic["heat_z"], metrics["price_z"])
         if not scenario:
             continue

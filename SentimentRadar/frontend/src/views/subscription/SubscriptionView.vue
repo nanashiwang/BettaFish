@@ -1,26 +1,25 @@
 <template>
   <div>
-    <div class="page-head">
-      <h2>订阅中心</h2>
+    <div class="page-head fade-up">
+      <h2 class="section-title">订阅中心</h2>
       <p class="muted" v-if="data">{{ data.disclaimer }}</p>
     </div>
 
     <div v-if="loading" v-loading="true" class="loading-block" />
     <el-row v-else-if="data" :gutter="16">
-      <el-col v-for="plan in data.plans" :key="plan.id" :xs="24" :sm="12" :lg="6">
-        <el-card
-          shadow="hover"
-          class="plan-card"
-          :class="{ recommended: plan.recommended }"
+      <el-col v-for="(plan, index) in data.plans" :key="plan.id" :xs="24" :sm="12" :lg="6">
+        <div
+          class="glass-card hoverable plan-card fade-up"
+          :class="[`fade-up-${index + 1}`, { recommended: plan.recommended }]"
         >
-          <el-tag v-if="plan.recommended" type="success" size="small" class="rec-tag">推荐</el-tag>
+          <span v-if="plan.recommended" class="rec-tag">推荐</span>
           <div class="audience muted">{{ plan.audience }}</div>
           <h3>{{ plan.name }}</h3>
-          <div class="price">
+          <div class="price num">
             ¥{{ plan.price_month }}<small> / 月</small>
-            <span v-if="plan.price_year" class="muted year">年付 ¥{{ plan.price_year }}</span>
+            <span class="faint year num" v-if="plan.price_year">年付 ¥{{ plan.price_year }}</span>
           </div>
-          <p class="summary">{{ plan.summary }}</p>
+          <p class="summary muted">{{ plan.summary }}</p>
           <div class="features">
             <div v-for="feature in plan.features" :key="feature" class="feature">
               <span class="check">✓</span>{{ feature }}
@@ -35,7 +34,7 @@
           >
             {{ plan.id === data.current_plan_id ? '当前方案' : `选择${plan.name}` }}
           </el-button>
-        </el-card>
+        </div>
       </el-col>
     </el-row>
   </div>
@@ -81,34 +80,45 @@ onMounted(load)
   margin-bottom: 20px;
 }
 
-.page-head h2 {
-  margin: 0 0 6px;
-}
-
 .loading-block {
   height: 320px;
 }
 
 .plan-card {
-  border-radius: 12px;
-  margin-bottom: 16px;
   position: relative;
+  padding: 24px 22px;
+  margin-bottom: 16px;
   height: calc(100% - 16px);
+  display: flex;
+  flex-direction: column;
 }
 
+/* 推荐套餐：渐变描边 + 辉光 */
 .plan-card.recommended {
-  border-color: #74c7c7;
-  box-shadow: 0 12px 36px rgba(23, 107, 135, 0.16);
+  border-color: transparent;
+  background:
+    linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box,
+    linear-gradient(135deg, var(--brand), var(--accent)) border-box;
+  box-shadow:
+    0 0 32px rgba(45, 212, 191, 0.18),
+    0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 .rec-tag {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 16px;
+  right: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #04211d;
+  background: linear-gradient(135deg, var(--brand), var(--accent));
 }
 
 .audience {
   margin-bottom: 4px;
+  font-size: 12px;
 }
 
 h3 {
@@ -117,16 +127,16 @@ h3 {
 }
 
 .price {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
-  color: var(--radar-brand);
+  color: var(--brand);
   margin-bottom: 8px;
 }
 
 .price small {
   font-size: 13px;
   font-weight: 400;
-  color: #8492a6;
+  color: var(--text-faint);
 }
 
 .year {
@@ -137,7 +147,6 @@ h3 {
 
 .summary {
   font-size: 13px;
-  color: #475669;
   line-height: 1.6;
   min-height: 42px;
 }
@@ -145,14 +154,15 @@ h3 {
 .features {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
+  gap: 7px;
+  margin-bottom: 18px;
   font-size: 13px;
-  color: #475669;
+  color: var(--text-secondary);
+  flex: 1;
 }
 
 .check {
-  color: #2d9596;
+  color: var(--brand);
   margin-right: 6px;
   font-weight: 700;
 }

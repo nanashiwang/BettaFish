@@ -323,7 +323,7 @@ async function handleSave() {
   align-items: center;
   padding: 9px 0;
   font-size: 14px;
-  border-bottom: 1px solid #f0f3f7;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .rule-row:last-child {

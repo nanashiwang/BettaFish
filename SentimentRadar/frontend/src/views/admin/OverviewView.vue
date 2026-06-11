@@ -96,10 +96,10 @@ onMounted(async () => {
   margin: 6px 0;
 }
 
-.tone-blue .stat-value { color: #176b87; }
-.tone-ok .stat-value { color: #2d9596; }
-.tone-warn .stat-value { color: #e6a23c; }
-.tone-danger .stat-value { color: #f56c6c; }
+.tone-blue .stat-value { color: var(--accent); }
+.tone-ok .stat-value { color: var(--brand); }
+.tone-warn .stat-value { color: #fbbf24; }
+.tone-danger .stat-value { color: var(--up); }
 
 .panel {
   border-radius: 12px;
@@ -128,8 +128,9 @@ onMounted(async () => {
 .trend-bar {
   width: 100%;
   max-width: 42px;
-  background: linear-gradient(180deg, #2d9596, #176b87);
+  background: linear-gradient(180deg, var(--brand), var(--accent));
   border-radius: 6px 6px 0 0;
   min-height: 6px;
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.25);
 }
 </style>

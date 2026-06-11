@@ -51,8 +51,9 @@ async function handleLogout() {
 }
 
 .sidebar {
-  background: #fff;
-  border-right: 1px solid #e4e9ef;
+  background: rgba(14, 21, 37, 0.7);
+  backdrop-filter: blur(16px);
+  border-right: 1px solid var(--glass-border);
 }
 
 .side-brand {
@@ -65,12 +66,14 @@ async function handleLogout() {
 .logo {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  background: var(--radar-brand);
-  color: #fff;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--brand), #0d9488);
+  color: #04211d;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.3);
 }
 
 .side-title {
@@ -80,11 +83,13 @@ async function handleLogout() {
 
 .side-menu {
   border-right: none;
+  background: transparent;
 }
 
 .admin-topbar {
-  background: #fff;
-  border-bottom: 1px solid #e4e9ef;
+  background: rgba(10, 15, 26, 0.75);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   gap: 12px;

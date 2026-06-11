@@ -109,14 +109,15 @@ def save_topics(trade_date: date, topics: List[Dict[str, Any]]) -> None:
             conn.execute(
                 text(
                     """
-                    INSERT INTO radar_topics (trade_date, name, keywords, news_refs, heat_score, heat_z, boards)
+                    INSERT INTO radar_topics (trade_date, name, keywords, news_refs, heat_score, heat_z, price_z, boards)
                     VALUES (:trade_date, :name, CAST(:keywords AS JSONB), CAST(:news_refs AS JSONB),
-                            :heat_score, :heat_z, CAST(:boards AS JSONB))
+                            :heat_score, :heat_z, :price_z, CAST(:boards AS JSONB))
                     ON CONFLICT (trade_date, name) DO UPDATE SET
                         keywords = EXCLUDED.keywords,
                         news_refs = EXCLUDED.news_refs,
                         heat_score = EXCLUDED.heat_score,
                         heat_z = EXCLUDED.heat_z,
+                        price_z = EXCLUDED.price_z,
                         boards = EXCLUDED.boards
                     """
                 ),
@@ -127,6 +128,7 @@ def save_topics(trade_date: date, topics: List[Dict[str, Any]]) -> None:
                     "news_refs": json.dumps(topic["news_indexes"]),
                     "heat_score": topic.get("heat_score", 0.0),
                     "heat_z": topic.get("heat_z"),
+                    "price_z": topic.get("price_z"),
                     "boards": json.dumps(topic.get("boards", []), ensure_ascii=False),
                 },
             )

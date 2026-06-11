@@ -24,12 +24,13 @@ import importlib
 from pathlib import Path
 from MindSpider.main import MindSpider
 from SentimentRadar.service import (
+    get_history as get_radar_history,
     get_my_focus as get_radar_my_focus,
     get_prediction_detail,
     get_settings as get_radar_settings,
     get_today_briefing,
-    update_settings as update_radar_settings,
 )
+from SentimentRadar import watchlist as radar_watchlist
 from SentimentRadar.platform_service import (
     confirm_risk as confirm_radar_risk,
     get_account as get_radar_account,
@@ -1049,22 +1050,51 @@ def api_radar_prediction_detail(card_id):
 
 @app.route('/api/radar/my')
 def api_radar_my_focus():
-    """返回我的关注命中和当前设置摘要。"""
+    """返回我的关注命中（基于真实关注表与当日话题匹配）。"""
     auth_error = _require_radar_login_json()
     if auth_error:
         return auth_error
-    return jsonify(get_radar_my_focus())
+    user = _radar_current_session_user() or {}
+    return jsonify(get_radar_my_focus(user.get('email', '')))
 
-@app.route('/api/radar/settings', methods=['GET', 'POST'])
+@app.route('/api/radar/settings')
 def api_radar_settings():
-    """读取或更新极简雷达设置。"""
+    """返回关注列表与推送设置。"""
     auth_error = _require_radar_login_json()
     if auth_error:
         return auth_error
+    user = _radar_current_session_user() or {}
+    return jsonify(get_radar_settings(user.get('email', '')))
+
+@app.route('/api/radar/history')
+def api_radar_history():
+    """返回历史预判与胜率统计。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    return jsonify(get_radar_history())
+
+@app.route('/api/radar/watchlist', methods=['GET', 'POST'])
+def api_radar_watchlist():
+    """查看或添加关注项。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    user = _radar_current_session_user() or {}
+    email = user.get('email', '')
     if request.method == 'GET':
-        return jsonify(get_radar_settings())
+        return jsonify({'success': True, 'items': radar_watchlist.list_items(email)})
     payload = request.get_json(silent=True) or {}
-    return jsonify(update_radar_settings(payload))
+    return jsonify(radar_watchlist.add_item(email, payload.get('type', ''), payload.get('name', '')))
+
+@app.route('/api/radar/watchlist/<int:item_id>', methods=['DELETE'])
+def api_radar_watchlist_delete(item_id):
+    """取消关注。"""
+    auth_error = _require_radar_login_json()
+    if auth_error:
+        return auth_error
+    user = _radar_current_session_user() or {}
+    return jsonify(radar_watchlist.remove_item(user.get('email', ''), item_id))
 
 @app.route('/api/auth/login', methods=['POST'])
 def api_auth_login():

@@ -1,96 +1,108 @@
 <template>
   <div v-if="loading" v-loading="true" class="loading-block" />
-  <template v-else-if="settings">
-    <el-row :gutter="16">
-      <el-col :xs="24" :md="12">
-        <el-card shadow="never" class="panel">
-          <template #header>关注对象</template>
-          <div class="group">
-            <div class="group-label muted">股票</div>
-            <el-tag v-for="item in settings.focus_targets.stocks" :key="item" size="small" effect="plain">
-              {{ item }}
+  <el-row v-else :gutter="16">
+    <el-col :xs="24" :md="14">
+      <div class="glass-card panel">
+        <h3 class="section-title">我的关注</h3>
+        <p class="muted intro">添加关注的股票、主题或板块，当日话题命中时会在「我的关注」中提示。</p>
+        <div v-for="group in GROUPS" :key="group.type" class="group">
+          <div class="group-label muted">{{ group.label }}</div>
+          <div class="group-tags">
+            <el-tag
+              v-for="item in itemsOf(group.type)"
+              :key="item.id"
+              closable
+              effect="plain"
+              @close="handleRemove(item.id)"
+            >
+              {{ item.name }}
             </el-tag>
+            <el-input
+              v-if="editingType === group.type"
+              ref="inputRef"
+              v-model="inputValue"
+              size="small"
+              class="tag-input"
+              :placeholder="`回车添加${group.label}`"
+              @keyup.enter="handleAdd(group.type)"
+              @blur="editingType = ''"
+            />
+            <el-button v-else size="small" text type="primary" @click="startEditing(group.type)">
+              + 添加
+            </el-button>
           </div>
-          <div class="group">
-            <div class="group-label muted">主题</div>
-            <el-tag v-for="item in settings.focus_targets.themes" :key="item" size="small" effect="plain">
-              {{ item }}
-            </el-tag>
-          </div>
-          <div class="group">
-            <div class="group-label muted">板块</div>
-            <el-tag v-for="item in settings.focus_targets.sectors" :key="item" size="small" effect="plain">
-              {{ item }}
-            </el-tag>
-          </div>
-        </el-card>
+        </div>
+      </div>
+    </el-col>
 
-        <el-card shadow="never" class="panel">
-          <template #header>风险偏好与推送渠道</template>
-          <div class="group">
-            <div class="group-label muted">风险偏好</div>
-            <el-tag v-for="item in settings.risk_preferences" :key="item" size="small" type="warning" effect="plain">
-              {{ item }}
-            </el-tag>
+    <el-col :xs="24" :md="10">
+      <div class="glass-card panel coming-soon">
+        <h3 class="section-title">推送提醒</h3>
+        <div v-for="template in pushTemplates" :key="template.id" class="template-row">
+          <div>
+            <div>{{ template.name }}</div>
+            <div class="faint">{{ template.time }}</div>
           </div>
-          <div class="group">
-            <div class="group-label muted">推送渠道</div>
-            <el-tag v-for="item in settings.channels" :key="item" size="small" effect="plain">
-              {{ item }}
-            </el-tag>
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :xs="24" :md="12">
-        <el-card shadow="never" class="panel">
-          <template #header>推送模板</template>
-          <div v-for="template in settings.push_templates" :key="template.id" class="template-row">
-            <div>
-              <div>{{ template.name }}</div>
-              <div class="muted">{{ template.time }}</div>
-            </div>
-            <el-switch v-model="template.enabled" />
-          </div>
-          <el-button type="primary" class="save-btn" :loading="saving" @click="handleSave">
-            保存设置
-          </el-button>
-        </el-card>
-      </el-col>
-    </el-row>
-  </template>
+          <el-switch :model-value="false" disabled />
+        </div>
+        <p class="faint hint">推送能力即将上线，先把关注列表建好</p>
+      </div>
+    </el-col>
+  </el-row>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { fetchSettings, saveSettings } from '../../api/radar'
-import type { RadarSettings } from '../../api/types'
+import { addWatchItem, fetchSettings, removeWatchItem } from '../../api/radar'
+import type { RadarSettings, WatchItem } from '../../api/types'
 
-const settings = ref<RadarSettings | null>(null)
+const GROUPS = [
+  { type: 'stock', label: '股票' },
+  { type: 'theme', label: '主题' },
+  { type: 'sector', label: '板块' },
+]
+
 const loading = ref(true)
-const saving = ref(false)
+const items = ref<WatchItem[]>([])
+const pushTemplates = ref<RadarSettings['push_templates']>([])
+const editingType = ref('')
+const inputValue = ref('')
+const inputRef = ref()
+
+function itemsOf(type: string) {
+  return items.value.filter((item) => item.type === type)
+}
+
+function startEditing(type: string) {
+  editingType.value = type
+  inputValue.value = ''
+  nextTick(() => inputRef.value?.[0]?.focus?.())
+}
+
+async function handleAdd(type: string) {
+  const name = inputValue.value.trim()
+  if (!name) return
+  const result = await addWatchItem(type, name)
+  items.value = result.items
+  inputValue.value = ''
+  ElMessage.success('已添加关注')
+}
+
+async function handleRemove(itemId: number) {
+  const result = await removeWatchItem(itemId)
+  items.value = result.items
+}
 
 onMounted(async () => {
   try {
     const result = await fetchSettings()
-    settings.value = result.settings
+    items.value = result.settings.watchlist
+    pushTemplates.value = result.settings.push_templates
   } finally {
     loading.value = false
   }
 })
-
-async function handleSave() {
-  if (!settings.value) return
-  saving.value = true
-  try {
-    const result = await saveSettings(settings.value)
-    settings.value = result.settings
-    ElMessage.success(result.message || '设置已保存')
-  } finally {
-    saving.value = false
-  }
-}
 </script>
 
 <style scoped>
@@ -99,21 +111,44 @@ async function handleSave() {
 }
 
 .panel {
-  border-radius: 12px;
+  padding: 20px 22px;
   margin-bottom: 16px;
+}
+
+.intro {
+  margin: -6px 0 14px;
 }
 
 .group {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 0;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.group:last-child {
+  border-bottom: none;
 }
 
 .group-label {
-  width: 40px;
+  width: 36px;
   flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.group-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag-input {
+  width: 140px;
+}
+
+.coming-soon {
+  opacity: 0.85;
 }
 
 .template-row {
@@ -121,12 +156,12 @@ async function handleSave() {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid #f0f3f7;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 14px;
 }
 
-.save-btn {
-  margin-top: 16px;
-  width: 100%;
+.hint {
+  margin: 14px 0 0;
+  font-size: 12px;
 }
 </style>

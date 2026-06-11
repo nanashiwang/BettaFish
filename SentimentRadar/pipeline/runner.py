@@ -121,10 +121,10 @@ def run_pipeline(trade_date: Optional[date] = None) -> Dict[str, Any]:
                 )
             _update_run(run_id, stage="signals", stats=stats)
 
-            # 5. 热度与背离信号
+            # 5. 热度与背离信号（build_signals 会把 price_z 回写到话题，再落库供散点图）
             signals.compute_heat(mapped, news, trade_date)
-            topic_extractor.save_topics(trade_date, mapped)
             signal_list = signals.build_signals(mapped, quotes_by_board)
+            topic_extractor.save_topics(trade_date, mapped)
             stats["signals"] = len(signal_list)
             if not signal_list:
                 raise RuntimeError("今日无显著舆情-价格背离信号（属正常情况，可明日再看）")

@@ -61,6 +61,17 @@ export interface PredictionCard {
   next: string
   evidence: string
   tags: string[]
+  heat_z?: number | null
+  price_z?: number | null
+  board_name?: string
+  board_trend?: number[]
+}
+
+export interface ScatterPoint {
+  name: string
+  heat_z: number
+  price_z: number
+  scenario: string | null
 }
 
 export interface TodayBriefing extends ApiResult {
@@ -70,6 +81,7 @@ export interface TodayBriefing extends ApiResult {
   disclaimer: string
   headline: string
   cards: PredictionCard[]
+  signals_scatter: ScatterPoint[]
   my_related: {
     summary: string
     highlight: string
@@ -107,29 +119,59 @@ export interface FocusHit {
   scenario: string
   risk: string
   next: string
+  card_id?: string | null
+}
+
+export interface WatchItem {
+  id: number
+  type: 'stock' | 'theme' | 'sector' | string
+  name: string
 }
 
 export interface RadarSettings {
-  focus_targets: {
-    stocks: string[]
-    themes: string[]
-    sectors: string[]
-  }
+  watchlist: WatchItem[]
   push_templates: { id: string; name: string; enabled: boolean; time: string }[]
-  risk_preferences: string[]
-  channels: string[]
 }
 
 export interface MyFocusResult extends ApiResult {
   updated_at: string
   disclaimer: string
   hits: FocusHit[]
-  settings: RadarSettings
+  watchlist: WatchItem[]
 }
 
 export interface SettingsResult extends ApiResult {
   updated_at: string
   settings: RadarSettings
+}
+
+// ---------- 信号历史 ----------
+export interface HistoryCard {
+  id: string
+  title: string
+  scenario: string
+  strength: string
+  judgement: string
+  boards: { code: string; name: string; type: string }[]
+  heat_z: number | null
+  price_z: number | null
+  return_1d: number | null
+  return_3d: number | null
+  return_5d: number | null
+}
+
+export interface HistoryStats {
+  total: number
+  evaluated: number
+  win_rate_3d: number | null
+  avg_return_3d: number | null
+  by_scenario: Record<string, { count: number; evaluated: number; wins: number; win_rate: number | null }>
+}
+
+export interface HistoryResult extends ApiResult {
+  disclaimer: string
+  stats: HistoryStats
+  days: { date: string; cards: HistoryCard[] }[]
 }
 
 // ---------- 订阅与账户 ----------

@@ -1,6 +1,55 @@
+/* ============================================================
+   舆情雷达 · 深色金融终端设计系统
+   ============================================================ */
+
 :root {
-  --radar-brand: #176b87;
-  --radar-bg: #f4f7f9;
+  /* 底色层级 */
+  --bg-page: #0a0f1a;
+  --bg-panel: #0e1525;
+  --bg-elevated: #131c30;
+
+  /* 玻璃拟态 */
+  --glass-bg: rgba(255, 255, 255, 0.045);
+  --glass-bg-hover: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.12);
+
+  /* 品牌与强调 */
+  --brand: #2dd4bf;
+  --brand-dim: rgba(45, 212, 191, 0.16);
+  --accent: #818cf8;
+  --accent-dim: rgba(129, 140, 248, 0.16);
+
+  /* 涨跌（A 股惯例：红涨绿跌） */
+  --up: #f87171;
+  --down: #34d399;
+
+  /* 场景色 */
+  --scenario-news-first: #2dd4bf; /* 先闻后动：机会 */
+  --scenario-resonance: #818cf8;  /* 同步共振：确认 */
+  --scenario-move-first: #fbbf24; /* 先动后闻：警惕 */
+
+  /* 文本 */
+  --text-primary: #e7edf6;
+  --text-secondary: #93a3bc;
+  --text-faint: #5b6b85;
+
+  /* 兼容旧变量名 */
+  --radar-brand: #2dd4bf;
+  --radar-bg: #0a0f1a;
+}
+
+/* ---------- Element Plus 深色变量对齐 ---------- */
+html.dark {
+  --el-bg-color: var(--bg-panel);
+  --el-bg-color-overlay: var(--bg-elevated);
+  --el-fill-color-blank: transparent;
+  --el-border-color: var(--glass-border);
+  --el-border-color-light: var(--glass-border);
+  --el-border-color-lighter: rgba(255, 255, 255, 0.06);
+  --el-color-primary: var(--brand);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
 }
 
 * {
@@ -9,8 +58,12 @@
 
 body {
   margin: 0;
-  background: var(--radar-bg);
-  color: #1f2d3d;
+  background:
+    radial-gradient(1100px 500px at 85% -10%, rgba(45, 212, 191, 0.07), transparent 60%),
+    radial-gradient(900px 500px at 0% 110%, rgba(129, 140, 248, 0.07), transparent 60%),
+    var(--bg-page);
+  background-attachment: fixed;
+  color: var(--text-primary);
   font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }
 
@@ -19,17 +72,108 @@ body {
 }
 
 .page-container {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 24px 20px 60px;
+  padding: 28px 20px 64px;
 }
 
 .muted {
-  color: #8492a6;
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
-/* ---------- 登录/注册页共享背景：品牌渐变 + 漂浮光斑 + 雷达扫描环 ---------- */
+.faint {
+  color: var(--text-faint);
+}
+
+/* ---------- 通用：玻璃卡片 ---------- */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glass-card.hoverable:hover {
+  transform: translateY(-3px);
+  background: var(--glass-bg-hover);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- 数字与涨跌 ---------- */
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+/* ---------- 场景色工具类 ---------- */
+.scenario-news-first {
+  --scenario-color: var(--scenario-news-first);
+}
+
+.scenario-resonance {
+  --scenario-color: var(--scenario-resonance);
+}
+
+.scenario-move-first {
+  --scenario-color: var(--scenario-move-first);
+}
+
+/* ---------- 区块标题 ---------- */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.section-title::before {
+  content: '';
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--brand), var(--accent));
+}
+
+/* ---------- 入场动效 ---------- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  animation: fade-up 0.5s ease both;
+}
+
+.fade-up-1 { animation-delay: 0.05s; }
+.fade-up-2 { animation-delay: 0.12s; }
+.fade-up-3 { animation-delay: 0.19s; }
+.fade-up-4 { animation-delay: 0.26s; }
+
+/* ---------- 登录/注册页：深色品牌背景 + 玻璃卡 ---------- */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -38,7 +182,10 @@ body {
   padding: 20px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #0a3744 0%, #176b87 52%, #2d9596 100%);
+  background:
+    radial-gradient(800px 600px at 75% 20%, rgba(45, 212, 191, 0.1), transparent 60%),
+    radial-gradient(700px 500px at 15% 85%, rgba(129, 140, 248, 0.12), transparent 60%),
+    linear-gradient(150deg, #0a0f1a 0%, #0d1b2a 55%, #0f2233 100%);
 }
 
 .auth-page::before {
@@ -46,14 +193,13 @@ body {
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(420px 420px at 18% 22%, rgba(116, 199, 199, 0.45), transparent 65%),
-    radial-gradient(520px 520px at 85% 78%, rgba(255, 196, 110, 0.2), transparent 60%),
-    radial-gradient(300px 300px at 70% 12%, rgba(45, 149, 150, 0.5), transparent 65%);
-  filter: blur(10px);
-  animation: auth-drift 16s ease-in-out infinite alternate;
+    radial-gradient(420px 420px at 20% 25%, rgba(45, 212, 191, 0.14), transparent 65%),
+    radial-gradient(520px 520px at 85% 75%, rgba(129, 140, 248, 0.12), transparent 60%);
+  filter: blur(14px);
+  animation: auth-drift 18s ease-in-out infinite alternate;
 }
 
-/* 雷达扫描环：呼应产品主题 */
+/* 雷达扫描环 */
 .auth-page::after {
   content: '';
   position: absolute;
@@ -64,8 +210,8 @@ body {
   margin-top: -320px;
   border-radius: 50%;
   background:
-    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.1) 0 1px, transparent 1px 72px),
-    conic-gradient(from 0deg, rgba(116, 199, 199, 0.28), transparent 70deg, transparent 360deg);
+    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 72px),
+    conic-gradient(from 0deg, rgba(45, 212, 191, 0.18), transparent 70deg, transparent 360deg);
   animation: auth-radar 14s linear infinite;
 }
 
@@ -87,13 +233,17 @@ body {
 .auth-card {
   position: relative;
   z-index: 1;
-  width: 420px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  padding: 36px 32px 28px;
-  box-shadow: 0 24px 64px rgba(5, 35, 46, 0.45);
+  width: 430px;
+  background: rgba(15, 23, 42, 0.66);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 38px 34px 30px;
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    0 32px 80px rgba(0, 0, 0, 0.55);
+  animation: fade-up 0.5s ease both;
 }
 
 .auth-brand {
@@ -111,13 +261,15 @@ body {
 .auth-logo {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
-  background: var(--radar-brand);
-  color: #fff;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--brand), #0d9488);
+  color: #04211d;
   font-size: 22px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 0 24px rgba(45, 212, 191, 0.35);
 }
 
 .auth-submit {
@@ -127,4 +279,8 @@ body {
 .auth-hint {
   text-align: center;
   margin-top: 18px;
+}
+
+.auth-hint a {
+  color: var(--brand);
 }

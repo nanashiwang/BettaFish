@@ -12,7 +12,8 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import text
 
-from SentimentRadar import db
+from SentimentRadar import db, watchlist
+from SentimentRadar.pipeline.signals import classify
 
 DISCLAIMER = "仅供舆情观察 · 不构成投资建议"
 
@@ -30,6 +31,7 @@ def _empty_briefing(message: str) -> Dict[str, Any]:
         "disclaimer": DISCLAIMER,
         "headline": message,
         "cards": [],
+        "signals_scatter": [],
         "my_related": {"summary": "暂无数据", "highlight": message, "items": []},
         "top_risk": {"title": "暂无风险信号", "level": "-", "scope": "-", "reason": message},
         "evidence_overview": [],
@@ -38,6 +40,21 @@ def _empty_briefing(message: str) -> Dict[str, Any]:
 
 def _latest_trade_date(conn) -> Optional[Any]:
     return conn.execute(text("SELECT MAX(trade_date) FROM radar_predictions")).scalar_one()
+
+
+def _board_trend(board_code: Optional[str], days: int = 30) -> List[float]:
+    """板块近 N 个交易日收盘价（迷你走势图用）。"""
+    if not board_code:
+        return []
+    with db.get_engine().begin() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT close FROM radar_board_quotes WHERE board_code = :code "
+                "ORDER BY trade_date DESC LIMIT :days"
+            ),
+            {"code": board_code, "days": days},
+        ).fetchall()
+    return [row.close for row in reversed(rows) if row.close is not None]
 
 
 def get_today_briefing() -> Dict[str, Any]:
@@ -66,6 +83,14 @@ def get_today_briefing() -> Dict[str, Any]:
             text("SELECT MAX(created_at) FROM radar_predictions WHERE trade_date = :d"),
             {"d": trade_date},
         ).scalar_one()
+        # 象限散点：当日全部已计算价格指标的话题
+        scatter_rows = conn.execute(
+            text(
+                "SELECT name, heat_z, price_z FROM radar_topics "
+                "WHERE trade_date = :d AND price_z IS NOT NULL AND heat_z IS NOT NULL"
+            ),
+            {"d": trade_date},
+        ).fetchall()
 
     cards: List[Dict[str, Any]] = []
     board_names: List[str] = []
@@ -85,6 +110,10 @@ def get_today_briefing() -> Dict[str, Any]:
             "next": row.next_watch,
             "evidence": row.evidence_summary,
             "tags": tags,
+            "heat_z": row.heat_z,
+            "price_z": row.price_z,
+            "board_name": boards[0].get("name") if boards else "",
+            "board_trend": _board_trend(boards[0].get("code")) if boards else [],
         })
 
     headline = rows[0].headline if rows else ""
@@ -105,6 +134,15 @@ def get_today_briefing() -> Dict[str, Any]:
         "disclaimer": DISCLAIMER,
         "headline": headline or f"{trade_date} 共识别 {len(cards)} 条舆情-价格信号",
         "cards": cards,
+        "signals_scatter": [
+            {
+                "name": row.name,
+                "heat_z": row.heat_z,
+                "price_z": row.price_z,
+                "scenario": classify(row.heat_z, row.price_z),
+            }
+            for row in scatter_rows
+        ],
         "my_related": {
             "summary": f"今日识别话题 {topic_count} 个 / 信号 {len(cards)} 条",
             "highlight": headline,
@@ -151,78 +189,142 @@ def get_prediction_detail(card_id: str) -> Dict[str, Any]:
     }
 
 
-# ====================== 以下为原型 Mock（我的关注 / 设置） ======================
+def get_history(limit: int = 200) -> Dict[str, Any]:
+    """历史预判（含回填收益）与胜率统计。"""
+    if not db.available():
+        return {"success": True, "stats": {}, "days": []}
+    with db.get_engine().begin() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT * FROM radar_predictions ORDER BY trade_date DESC, rank LIMIT :limit"
+            ),
+            {"limit": limit},
+        ).fetchall()
 
-SETTINGS = {
-    "focus_targets": {
-        "stocks": ["寒武纪", "中科曙光", "宁德时代"],
-        "themes": ["AI 算力", "半导体", "固态电池"],
-        "sectors": ["计算机设备", "电子", "新能源"],
-    },
-    "push_templates": [
-        {"id": "morning", "name": "早间 3 条", "enabled": True, "time": "08:30"},
-        {"id": "noon", "name": "午间变化", "enabled": True, "time": "11:45"},
-        {"id": "close", "name": "收盘复盘", "enabled": True, "time": "15:30"},
-        {"id": "risk", "name": "高风险即时提醒", "enabled": True, "time": "实时"},
-    ],
-    "risk_preferences": ["消息兑现风险", "过热风险", "来源不明", "负面扩散"],
-    "channels": ["站内信", "邮件", "企业微信"],
-}
+    days: Dict[str, List[Dict[str, Any]]] = {}
+    evaluated: List[Any] = []
+    by_scenario: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        date_key = row.trade_date.isoformat()
+        days.setdefault(date_key, []).append({
+            "id": row.card_id,
+            "title": row.title,
+            "scenario": row.scenario,
+            "strength": row.strength,
+            "judgement": row.judgement,
+            "boards": row.boards if isinstance(row.boards, list) else [],
+            "heat_z": row.heat_z,
+            "price_z": row.price_z,
+            "return_1d": row.return_1d,
+            "return_3d": row.return_3d,
+            "return_5d": row.return_5d,
+        })
+        bucket = by_scenario.setdefault(row.scenario, {"count": 0, "evaluated": 0, "wins": 0})
+        bucket["count"] += 1
+        if row.return_3d is not None:
+            evaluated.append(row.return_3d)
+            bucket["evaluated"] += 1
+            if row.return_3d > 0:
+                bucket["wins"] += 1
+
+    for bucket in by_scenario.values():
+        bucket["win_rate"] = (
+            round(bucket["wins"] / bucket["evaluated"] * 100, 1) if bucket["evaluated"] else None
+        )
+
+    stats = {
+        "total": len(rows),
+        "evaluated": len(evaluated),
+        "win_rate_3d": round(len([r for r in evaluated if r > 0]) / len(evaluated) * 100, 1)
+        if evaluated
+        else None,
+        "avg_return_3d": round(sum(evaluated) / len(evaluated), 2) if evaluated else None,
+        "by_scenario": by_scenario,
+    }
+    return {
+        "success": True,
+        "disclaimer": DISCLAIMER,
+        "stats": stats,
+        "days": [{"date": key, "cards": value} for key, value in days.items()],
+    }
 
 
-def get_my_focus() -> Dict[str, Any]:
+# ====================== 我的关注（真实关注表） ======================
+
+PUSH_TEMPLATES_PREVIEW = [
+    {"id": "morning", "name": "早间信号推送", "enabled": False, "time": "即将上线"},
+    {"id": "risk", "name": "高风险即时提醒", "enabled": False, "time": "即将上线"},
+]
+
+
+def _match_watchlist(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """关注项与最近交易日话题/预判做包含匹配，返回命中列表。"""
+    if not items:
+        return []
+    with db.get_engine().begin() as conn:
+        trade_date = conn.execute(text("SELECT MAX(trade_date) FROM radar_topics")).scalar_one()
+        if not trade_date:
+            return []
+        topics = conn.execute(
+            text("SELECT name, keywords, boards, heat_z FROM radar_topics WHERE trade_date = :d"),
+            {"d": trade_date},
+        ).fetchall()
+        predictions = conn.execute(
+            text("SELECT card_id, title, scenario, risk, next_watch, tags FROM radar_predictions WHERE trade_date = :d"),
+            {"d": trade_date},
+        ).fetchall()
+
+    hits = []
+    for item in items:
+        for topic in topics:
+            keywords = topic.keywords if isinstance(topic.keywords, list) else []
+            boards = topic.boards if isinstance(topic.boards, list) else []
+            haystack = [topic.name, *keywords, *(b.get("name", "") for b in boards)]
+            if not any(item["name"] in h or h in item["name"] for h in haystack if h):
+                continue
+            # 找到对应的预判卡（标题/标签包含话题名）
+            prediction = next(
+                (
+                    p
+                    for p in predictions
+                    if topic.name in p.title
+                    or any(topic.name in str(t) for t in (p.tags if isinstance(p.tags, list) else []))
+                ),
+                None,
+            )
+            hits.append({
+                "name": item["name"],
+                "type": watchlist.TYPE_LABELS.get(item["type"], item["type"]),
+                "match": topic.name,
+                "scenario": prediction.scenario if prediction else "观察中",
+                "risk": prediction.risk if prediction else f"热度 z 分 {topic.heat_z}，暂未形成显著信号",
+                "next": prediction.next_watch if prediction else "继续跟踪舆情与板块联动",
+                "card_id": prediction.card_id if prediction else None,
+            })
+            break
+    return hits
+
+
+def get_my_focus(user_email: str) -> Dict[str, Any]:
+    if not db.available():
+        return {"success": True, "updated_at": _timestamp(), "disclaimer": DISCLAIMER, "hits": [], "watchlist": []}
+    items = watchlist.list_items(user_email)
     return {
         "success": True,
         "updated_at": _timestamp(),
         "disclaimer": DISCLAIMER,
-        "hits": [
-            {
-                "name": "寒武纪",
-                "type": "股票",
-                "match": "AI 算力主线",
-                "scenario": "同步共振",
-                "risk": "讨论过热",
-                "next": "观察公告或订单证据补充",
-            },
-            {
-                "name": "半导体",
-                "type": "板块",
-                "match": "景气周期延续",
-                "scenario": "先闻后动",
-                "risk": "业绩分化",
-                "next": "观察产业数据与头部公司披露",
-            },
-            {
-                "name": "固态电池",
-                "type": "主题",
-                "match": "午后讨论升温",
-                "scenario": "闻而不动",
-                "risk": "市场反馈有限",
-                "next": "观察是否扩散到板块联动",
-            },
-        ],
-        "settings": deepcopy(SETTINGS),
+        "hits": _match_watchlist(items),
+        "watchlist": items,
     }
 
 
-def get_settings() -> Dict[str, Any]:
+def get_settings(user_email: str) -> Dict[str, Any]:
+    items = watchlist.list_items(user_email) if db.available() else []
     return {
         "success": True,
         "updated_at": _timestamp(),
-        "settings": deepcopy(SETTINGS),
-    }
-
-
-def update_settings(payload: Dict[str, Any]) -> Dict[str, Any]:
-    # 原型阶段仅回显前端提交内容，不写入磁盘，避免误改用户配置。
-    merged = deepcopy(SETTINGS)
-    if isinstance(payload, dict):
-        for key in ("focus_targets", "push_templates", "risk_preferences", "channels"):
-            if key in payload:
-                merged[key] = payload[key]
-    return {
-        "success": True,
-        "message": "设置已保存（原型内存态）",
-        "updated_at": _timestamp(),
-        "settings": merged,
+        "settings": {
+            "watchlist": items,
+            "push_templates": deepcopy(PUSH_TEMPLATES_PREVIEW),
+        },
     }

@@ -153,6 +153,6 @@ onMounted(load)
 .sub-title {
   margin: 8px 0;
   font-size: 14px;
-  color: var(--radar-brand);
+  color: var(--brand);
 }
 </style>

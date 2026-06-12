@@ -8,11 +8,14 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
+from loguru import logger
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from SentimentRadar import user_store
+from SentimentRadar import email_service, order_store, payment_service, user_store
 
 
 def _timestamp() -> str:
@@ -166,65 +169,90 @@ ADMIN_USERS = [
     {
         "id": "u_10001",
         "name": "王先生",
+        "username": "wang",
         "email": "wang@example.com",
+        "registration_source": "密码注册",
+        "register_ip": "111.198.71.33",
         "phone": "138****2688",
         "role": "订阅用户",
         "plan": "标准版",
         "expires_at": _date_after(30),
+        "used_balance": "$0.00",
+        "group": "default",
         "usage": "3条 / 14关注",
-        "status": "正常",
+        "status": "已启用",
         "last_active": "2 分钟前",
         "note": "用户多次查看 AI 算力主题证据链，未出现异常调用。",
     },
     {
         "id": "u_10002",
         "name": "内容号 A",
+        "username": "creator_a",
         "email": "creator@radar.cn",
+        "registration_source": "密码注册",
+        "register_ip": "117.186.43.154",
         "phone": "139****1024",
         "role": "创作者",
         "plan": "创作者版",
         "expires_at": _date_after(180),
+        "used_balance": "$41.31",
+        "group": "default",
         "usage": "3条 / 186关注",
-        "status": "高用量",
+        "status": "已启用",
         "last_active": "18 分钟前",
         "note": "素材导出频率较高，成本仍在套餐范围内。",
     },
     {
         "id": "u_10003",
         "name": "李女士",
+        "username": "li",
         "email": "li@example.com",
+        "registration_source": "密码注册",
+        "register_ip": "222.20.193.43",
         "phone": "138****9120",
         "role": "免费用户",
-        "plan": "免费版",
+        "plan": "无套餐",
         "expires_at": "-",
+        "used_balance": "$2.08",
+        "group": "default",
         "usage": "1条 / 5关注",
-        "status": "未订阅",
+        "status": "已启用",
         "last_active": "1 小时前",
         "note": "多次点击订阅页，适合运营触达。",
     },
     {
         "id": "u_10004",
         "name": "测试账号",
+        "username": "test",
         "email": "test@example.com",
+        "registration_source": "管理员创建",
+        "register_ip": "23.151.104.146",
         "phone": "137****0001",
         "role": "订阅用户",
         "plan": "专业版",
         "expires_at": _date_after(16),
+        "used_balance": "$0.34",
+        "group": "default",
         "usage": "3条 / 82关注",
-        "status": "冻结",
+        "status": "已禁用",
         "last_active": "昨天",
         "note": "测试用账号，禁止真实推送。",
     },
     {
         "id": "u_10005",
         "name": "运营账号",
+        "username": "ops",
         "email": "ops@radar.cn",
+        "registration_source": "管理员创建",
+        "register_ip": "36.112.18.139",
         "phone": "136****7788",
         "role": "管理员",
         "plan": "内部",
         "expires_at": "-",
+        "used_balance": "$0.00",
+        "group": "internal",
         "usage": "不限",
-        "status": "正常",
+        "status": "已启用",
         "last_active": "刚刚",
         "note": "后台运营账号。",
     },
@@ -439,48 +467,163 @@ def confirm_risk(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {"success": True, "message": "风险声明已确认", "record": record}
 
 
-def get_plans() -> Dict[str, Any]:
+def _plan_by_id(plan_id: str) -> Dict[str, Any]:
+    return next((item for item in PLANS if item["id"] == plan_id), PLANS[1])
+
+
+def _period_from_payload(payload: Dict[str, Any]) -> str:
+    return "year" if payload.get("period") == "year" else "month"
+
+
+def _period_label(period: str) -> str:
+    return "年付" if period == "year" else "月付"
+
+
+def _plan_amount(plan: Dict[str, Any], period: str) -> Decimal:
+    price_key = "price_year" if period == "year" else "price_month"
+    return Decimal(str(plan.get(price_key) or 0)).quantize(Decimal("0.01"))
+
+
+def _subscription_for_plan(plan: Dict[str, Any], period: str, paid_at: str = "") -> Dict[str, Any]:
+    days = 365 if period == "year" else 30
+    try:
+        started = datetime.strptime(paid_at[:10], "%Y-%m-%d") if paid_at else datetime.now()
+    except ValueError:
+        started = datetime.now()
+    return {
+        "plan_id": plan["id"],
+        "plan_name": plan["name"],
+        "status": "active",
+        "renewal": False,
+        "started_at": started.strftime("%Y-%m-%d"),
+        "expires_at": (started + timedelta(days=days)).strftime("%Y-%m-%d"),
+    }
+
+
+def _activate_subscription(account: Optional[str], subscription: Dict[str, Any]) -> Dict[str, Any]:
+    account_text = str(account or "").strip().lower()
+    if account_text:
+        if user_store.available():
+            user_store.update_subscription(account_text, subscription)
+            return subscription
+        if account_text in REGISTERED_USERS:
+            REGISTERED_USERS[account_text]["subscription"] = deepcopy(subscription)
+            REGISTERED_USERS[account_text]["user"]["plan_id"] = subscription.get("plan_id", "free")
+            return subscription
+
+    SUBSCRIPTION.update(subscription)
+    return deepcopy(SUBSCRIPTION)
+
+
+def get_plans(current_plan_id: Optional[str] = None) -> Dict[str, Any]:
     return {
         "success": True,
         "plans": deepcopy(PLANS),
-        "current_plan_id": SUBSCRIPTION["plan_id"],
+        "current_plan_id": current_plan_id or SUBSCRIPTION["plan_id"],
         "disclaimer": "订阅只增加舆情摘要、证据链深度、关注数量和推送能力，不构成投资建议。",
     }
 
 
 def subscribe(payload: Dict[str, Any], account: Optional[str] = None) -> Dict[str, Any]:
     plan_id = payload.get("plan_id", "standard")
-    plan = next((item for item in PLANS if item["id"] == plan_id), PLANS[1])
-    subscription = {
+    plan = _plan_by_id(plan_id)
+    period = _period_from_payload(payload)
+    subscription = _subscription_for_plan(plan, period)
+    message = f"已切换为 {plan['name']}（原型模式，未发起真实支付）"
+    activated = _activate_subscription(account, subscription)
+    return {"success": True, "message": message, "subscription": deepcopy(activated)}
+
+
+def create_payment(payload: Dict[str, Any], account: Optional[str], user: Dict[str, Any], base_url: str) -> Dict[str, Any]:
+    """创建在线支付订单；未启用 epay 时保留原型直开通。"""
+    plan = _plan_by_id(str(payload.get("plan_id") or "standard"))
+    period = _period_from_payload(payload)
+    amount = _plan_amount(plan, period)
+    account_text = str(account or "").strip().lower()
+
+    if amount <= 0 or not payment_service.epay_enabled():
+        return subscribe({"plan_id": plan["id"], "period": period}, account_text)
+    if not payment_service.epay_configured():
+        return {"success": False, "message": "请先在后台完整配置易支付参数"}
+    if not account_text or "@" not in account_text:
+        return {"success": False, "message": "当前账号缺少有效邮箱，无法创建订单"}
+
+    from config import reload_settings
+
+    settings = reload_settings()
+    out_trade_no = f"BF{datetime.now():%Y%m%d%H%M%S}{uuid4().hex[:8].upper()}"
+    subject = f"{settings.EPAY_NAME_PREFIX} {plan['name']} {_period_label(period)}"
+    order = order_store.create_order({
+        "out_trade_no": out_trade_no,
+        "user_email": account_text,
+        "user_name": user.get("name") or user.get("username") or account_text,
         "plan_id": plan["id"],
         "plan_name": plan["name"],
-        "status": "active",
-        "renewal": False,
-        "started_at": datetime.now().strftime("%Y-%m-%d"),
-        "expires_at": _date_after(30),
-    }
-    message = f"已切换为 {plan['name']}（原型模式，未发起真实支付）"
-
-    # 注册用户：持久化到自己的记录；演示账号：更新全局 Mock。
-    account_text = str(account or "").strip().lower()
-    if account_text:
-        if user_store.available():
-            if user_store.update_subscription(account_text, subscription):
-                return {"success": True, "message": message, "subscription": subscription}
-        elif account_text in REGISTERED_USERS:
-            REGISTERED_USERS[account_text]["subscription"] = subscription
-            REGISTERED_USERS[account_text]["user"]["plan_id"] = plan["id"]
-            return {"success": True, "message": message, "subscription": deepcopy(subscription)}
-
-    SUBSCRIPTION.update(subscription)
-    return {"success": True, "message": message, "subscription": deepcopy(SUBSCRIPTION)}
-
-
-def get_subscription() -> Dict[str, Any]:
+        "period": period,
+        "amount": float(amount),
+        "subject": subject,
+        "pay_type": payload.get("pay_type") or settings.EPAY_TYPE or "alipay",
+    })
+    payment_url = payment_service.create_epay_url(order, base_url)
     return {
         "success": True,
-        "subscription": deepcopy(SUBSCRIPTION),
-        "plan": next((deepcopy(item) for item in PLANS if item["id"] == SUBSCRIPTION["plan_id"]), deepcopy(PLANS[1])),
+        "message": "订单已创建，请跳转支付",
+        "payment_required": True,
+        "payment_url": payment_url,
+        "order": order,
+    }
+
+
+def _activate_paid_order(order: Dict[str, Any]) -> Dict[str, Any]:
+    plan = _plan_by_id(order.get("plan_id", "standard"))
+    subscription = _subscription_for_plan(plan, order.get("period", "month"), order.get("paid_at", ""))
+    return _activate_subscription(order.get("user_email"), subscription)
+
+
+def handle_payment_notify(params: Dict[str, Any]) -> Dict[str, Any]:
+    if not payment_service.verify_epay_notify(params):
+        return {"success": False, "message": "易支付签名验证失败"}
+
+    trade_status = str(params.get("trade_status") or "").strip()
+    if trade_status and trade_status not in {"TRADE_SUCCESS", "TRADE_FINISHED"}:
+        return {"success": False, "message": f"支付状态未完成：{trade_status}"}
+
+    out_trade_no = str(params.get("out_trade_no") or "").strip()
+    order = order_store.get_order(out_trade_no)
+    if not order:
+        return {"success": False, "message": "订单不存在"}
+
+    was_paid = order.get("status") == "paid"
+    if not was_paid:
+        order = order_store.mark_order_paid(
+            out_trade_no,
+            str(params.get("trade_no") or params.get("api_trade_no") or ""),
+            dict(params),
+        ) or order
+    subscription = _activate_paid_order(order)
+
+    try:
+        from config import reload_settings
+
+        settings = reload_settings()
+        if settings.SMTP_ENABLED and not was_paid:
+            email_service.send_email(
+                to_email=order["user_email"],
+                subject="BettaFish 舆情雷达订阅已开通",
+                text=f"您的 {order['plan_name']} {_period_label(order.get('period', 'month'))} 已支付成功，到期日 {subscription['expires_at']}。",
+            )
+    except Exception as exc:  # 邮件失败不影响支付入账
+        logger.warning(f"支付成功邮件发送失败: {exc}")
+
+    return {"success": True, "message": "支付已确认", "order": order, "subscription": subscription}
+
+
+def get_subscription(subscription: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    current = deepcopy(subscription or SUBSCRIPTION)
+    return {
+        "success": True,
+        "subscription": current,
+        "plan": deepcopy(_plan_by_id(current.get("plan_id", "standard"))),
     }
 
 
@@ -488,17 +631,33 @@ def get_usage() -> Dict[str, Any]:
     return {"success": True, "usage": deepcopy(USAGE), "updated_at": _timestamp()}
 
 
-def get_bills() -> Dict[str, Any]:
-    return {"success": True, "bills": deepcopy(BILLS)}
+def _order_to_bill(order: Dict[str, Any]) -> Dict[str, Any]:
+    status_map = {"paid": "已支付", "pending": "待支付", "closed": "已关闭"}
+    paid_at = order.get("paid_at") or order.get("created_at") or ""
+    return {
+        "id": order.get("out_trade_no", ""),
+        "plan": f"{order.get('plan_name', '')}{_period_label(order.get('period', 'month'))}",
+        "amount": order.get("amount", 0),
+        "status": status_map.get(order.get("status", ""), order.get("status", "")),
+        "paid_at": paid_at[:10],
+    }
 
 
-def get_account() -> Dict[str, Any]:
+def get_bills(account: Optional[str] = None) -> Dict[str, Any]:
+    order_bills = [_order_to_bill(order) for order in order_store.list_orders_for_user(account or "")]
+    return {"success": True, "bills": order_bills + deepcopy(BILLS)}
+
+
+def get_account(user: Optional[Dict[str, Any]] = None, subscription: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    current_user = deepcopy(user or CURRENT_USER)
+    current_subscription = deepcopy(subscription or SUBSCRIPTION)
+    bills = get_bills(current_user.get("email", "")).get("bills", [])
     return {
         "success": True,
-        "user": deepcopy(CURRENT_USER),
-        "subscription": deepcopy(SUBSCRIPTION),
+        "user": current_user,
+        "subscription": current_subscription,
         "usage": deepcopy(USAGE),
-        "bills": deepcopy(BILLS),
+        "bills": bills,
         "risk_confirmations": deepcopy(RISK_CONFIRMATIONS),
     }
 
@@ -556,7 +715,7 @@ def get_admin_user(user_id: str) -> Dict[str, Any]:
 def update_admin_user(user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     for user in ADMIN_USERS:
         if user["id"] == user_id:
-            for key in ("status", "plan", "note", "role"):
+            for key in ("status", "plan", "note", "role", "group"):
                 if key in payload:
                     user[key] = payload[key]
             return {"success": True, "message": "用户已更新（原型内存态）", "user": deepcopy(user)}

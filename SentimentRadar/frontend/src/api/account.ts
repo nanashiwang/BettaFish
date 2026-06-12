@@ -1,13 +1,13 @@
 import http from './http'
-import type { AccountAggregate, ApiResult, PlansResult, Subscription } from './types'
+import type { AccountAggregate, ApiResult, PlansResult, SubscribeResult, Subscription } from './types'
 
 export function fetchPlans() {
   return http.get<PlansResult>('/account/plans').then((res) => res.data)
 }
 
-export function subscribePlan(planId: string) {
+export function subscribePlan(planId: string, period: 'month' | 'year', payType: string) {
   return http
-    .post<ApiResult & { subscription: Subscription }>('/account/subscribe', { plan_id: planId })
+    .post<SubscribeResult>('/account/subscribe', { plan_id: planId, period, pay_type: payType })
     .then((res) => res.data)
 }
 

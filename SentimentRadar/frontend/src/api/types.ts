@@ -242,6 +242,22 @@ export interface Bill {
   paid_at: string
 }
 
+export interface PaymentOrder {
+  out_trade_no: string
+  plan_name: string
+  period: 'month' | 'year' | string
+  amount: number
+  subject: string
+  status: string
+}
+
+export interface SubscribeResult extends ApiResult {
+  subscription?: Subscription
+  payment_required?: boolean
+  payment_url?: string
+  order?: PaymentOrder
+}
+
 export interface RiskConfirmation {
   version: string
   confirmed_at: string
@@ -275,11 +291,16 @@ export interface AdminOverview extends ApiResult {
 export interface AdminUser {
   id: string
   name: string
+  username?: string
   email: string
+  registration_source?: string
+  register_ip?: string
   phone: string
   role: string
   plan: string
   expires_at: string
+  used_balance?: string
+  group?: string
   usage: string
   status: string
   last_active: string

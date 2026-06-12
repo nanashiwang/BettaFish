@@ -68,6 +68,12 @@ export function updateSystemConfig(payload: Partial<SystemConfig>) {
     .then((res) => res.data)
 }
 
+export function sendTestEmail(toEmail: string) {
+  return http
+    .post<ApiResult>('/admin/system/email/test', { to_email: toEmail })
+    .then((res) => res.data)
+}
+
 export function fetchSystemStatus() {
   return http.get<SystemStatus>('/admin/system/status').then((res) => res.data)
 }

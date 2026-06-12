@@ -3,6 +3,17 @@
     <div class="page-head fade-up">
       <h2 class="section-title">订阅中心</h2>
       <p class="muted" v-if="data">{{ data.disclaimer }}</p>
+      <div class="purchase-controls">
+        <el-radio-group v-model="period" size="small">
+          <el-radio-button value="month">月付</el-radio-button>
+          <el-radio-button value="year">年付</el-radio-button>
+        </el-radio-group>
+        <el-radio-group v-model="payType" size="small">
+          <el-radio-button value="alipay">支付宝</el-radio-button>
+          <el-radio-button value="wxpay">微信</el-radio-button>
+          <el-radio-button value="qqpay">QQ</el-radio-button>
+        </el-radio-group>
+      </div>
     </div>
 
     <div v-if="loading" v-loading="true" class="loading-block" />
@@ -16,8 +27,8 @@
           <div class="audience muted">{{ plan.audience }}</div>
           <h3>{{ plan.name }}</h3>
           <div class="price num">
-            ¥{{ plan.price_month }}<small> / 月</small>
-            <span class="faint year num" v-if="plan.price_year">年付 ¥{{ plan.price_year }}</span>
+            ¥{{ planPrice(plan) }}<small> / {{ period === 'year' ? '年' : '月' }}</small>
+            <span class="faint year num" v-if="period === 'month' && plan.price_year">年付 ¥{{ plan.price_year }}</span>
           </div>
           <p class="summary muted">{{ plan.summary }}</p>
           <div class="features">
@@ -51,6 +62,8 @@ const auth = useAuthStore()
 const data = ref<PlansResult | null>(null)
 const loading = ref(true)
 const subscribingId = ref('')
+const period = ref<'month' | 'year'>('month')
+const payType = ref('alipay')
 
 async function load() {
   try {
@@ -63,13 +76,21 @@ async function load() {
 async function handleSubscribe(plan: Plan) {
   subscribingId.value = plan.id
   try {
-    const result = await subscribePlan(plan.id)
+    const result = await subscribePlan(plan.id, period.value, payType.value)
+    if (result.payment_required && result.payment_url) {
+      ElMessage.success(result.message || '订单已创建')
+      window.location.href = result.payment_url
+      return
+    }
     ElMessage.success(result.message || '订阅成功')
-    // 同步用户菜单中的套餐显示，并刷新当前方案标记
     await Promise.all([auth.refreshSubscription(), load()])
   } finally {
     subscribingId.value = ''
   }
+}
+
+function planPrice(plan: Plan) {
+  return period.value === 'year' ? plan.price_year : plan.price_month
 }
 
 onMounted(load)
@@ -78,6 +99,13 @@ onMounted(load)
 <style scoped>
 .page-head {
   margin-bottom: 20px;
+}
+
+.purchase-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
 }
 
 .loading-block {

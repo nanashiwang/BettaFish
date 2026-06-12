@@ -93,6 +93,27 @@ class Settings(BaseSettings):
     ANSPIRE_BASE_URL: Optional[str] = Field("https://plugin.anspire.cn/api/ntsearch/search", description="Anspire AI 搜索BaseUrl")
     ANSPIRE_API_KEY: Optional[str] = Field(None, description="Anspire AI Search API（申请地址：https://open.anspire.cn/?share_code=3E1FUOUH）API密钥，用于Anspire搜索")
 
+    # ================== 邮件推送配置 ====================
+    SMTP_ENABLED: bool = Field(False, description="是否启用 SMTP 邮件发送")
+    SMTP_HOST: Optional[str] = Field(None, description="SMTP 服务器地址")
+    SMTP_PORT: int = Field(465, description="SMTP 端口，常见为 465 SSL 或 587 STARTTLS")
+    SMTP_USER: Optional[str] = Field(None, description="SMTP 登录用户名")
+    SMTP_PASSWORD: Optional[str] = Field(None, description="SMTP 登录密码或授权码")
+    SMTP_FROM_EMAIL: Optional[str] = Field(None, description="发件邮箱")
+    SMTP_FROM_NAME: str = Field("BettaFish 舆情雷达", description="发件人名称")
+    SMTP_USE_SSL: bool = Field(True, description="是否使用 SMTP_SSL")
+    SMTP_USE_TLS: bool = Field(False, description="是否使用 STARTTLS")
+
+    # ================== 易支付在线购买配置 ====================
+    EPAY_ENABLED: bool = Field(False, description="是否启用易支付在线购买")
+    EPAY_API_URL: Optional[str] = Field(None, description="易支付网关地址，例如 https://pay.example.com/ 或 submit.php 完整地址")
+    EPAY_PID: Optional[str] = Field(None, description="易支付商户 ID")
+    EPAY_KEY: Optional[str] = Field(None, description="易支付商户密钥")
+    EPAY_TYPE: str = Field("alipay", description="默认支付方式：alipay、wxpay、qqpay 等")
+    EPAY_RETURN_URL: Optional[str] = Field(None, description="支付同步跳转地址，留空时自动使用当前域名")
+    EPAY_NOTIFY_URL: Optional[str] = Field(None, description="支付异步通知地址，留空时自动使用当前域名")
+    EPAY_NAME_PREFIX: str = Field("BettaFish 舆情雷达", description="订单标题前缀")
+
     
     # ================== Insight Engine 搜索配置 ====================
     DEFAULT_SEARCH_HOT_CONTENT_LIMIT: int = Field(100, description="热榜内容默认最大数")

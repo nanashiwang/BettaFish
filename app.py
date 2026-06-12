@@ -33,6 +33,7 @@ from SentimentRadar.service import (
 from SentimentRadar import watchlist as radar_watchlist
 from SentimentRadar.platform_service import (
     confirm_risk as confirm_radar_risk,
+    create_payment as create_radar_payment,
     get_account as get_radar_account,
     get_admin_overview as get_radar_admin_overview,
     get_admin_plans as get_radar_admin_plans,
@@ -40,14 +41,13 @@ from SentimentRadar.platform_service import (
     get_admin_user as get_radar_admin_user,
     get_audit_logs as get_radar_audit_logs,
     get_bills as get_radar_bills,
-    get_current_user as get_radar_current_user,
     get_plans as get_radar_plans,
     get_subscription as get_radar_subscription,
     get_usage as get_radar_usage,
+    handle_payment_notify as handle_radar_payment_notify,
     list_admin_users as list_radar_admin_users,
     login as login_radar_user,
     register as register_radar_user,
-    subscribe as subscribe_radar_plan,
     update_admin_plan as update_radar_admin_plan,
     update_admin_settings as update_radar_admin_settings,
     update_admin_user as update_radar_admin_user,
@@ -144,7 +144,24 @@ CONFIG_KEYS = [
     'TAVILY_API_KEY',
     'SEARCH_TOOL_TYPE',
     'BOCHA_WEB_SEARCH_API_KEY',
-    'ANSPIRE_API_KEY'
+    'ANSPIRE_API_KEY',
+    'SMTP_ENABLED',
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_USER',
+    'SMTP_PASSWORD',
+    'SMTP_FROM_EMAIL',
+    'SMTP_FROM_NAME',
+    'SMTP_USE_SSL',
+    'SMTP_USE_TLS',
+    'EPAY_ENABLED',
+    'EPAY_API_URL',
+    'EPAY_PID',
+    'EPAY_KEY',
+    'EPAY_TYPE',
+    'EPAY_RETURN_URL',
+    'EPAY_NOTIFY_URL',
+    'EPAY_NAME_PREFIX',
 ]
 
 
@@ -1171,19 +1188,26 @@ def api_account_plans():
     auth_error = _require_radar_login_json()
     if auth_error:
         return auth_error
-    return jsonify(get_radar_plans())
+    subscription = session.get(RADAR_SESSION_SUBSCRIPTION_KEY, {})
+    return jsonify(get_radar_plans(subscription.get('plan_id')))
 
 @app.route('/api/account/subscribe', methods=['POST'])
 def api_account_subscribe():
-    """原型订阅接口：仅切换内存态套餐，不发起真实支付。"""
+    """订阅接口：启用易支付时创建订单，否则保留原型直开通。"""
     auth_error = _require_radar_login_json()
     if auth_error:
         return auth_error
     payload = request.get_json(silent=True) or {}
     current_user = _radar_current_session_user() or {}
-    result = subscribe_radar_plan(payload, current_user.get('email'))
+    result = create_radar_payment(
+        payload,
+        current_user.get('email'),
+        current_user,
+        request.url_root.rstrip('/'),
+    )
     if result.get('success'):
-        session[RADAR_SESSION_SUBSCRIPTION_KEY] = result.get('subscription', {})
+        if result.get('subscription'):
+            session[RADAR_SESSION_SUBSCRIPTION_KEY] = result.get('subscription', {})
     return jsonify(result)
 
 @app.route('/api/account/subscription')
@@ -1192,7 +1216,7 @@ def api_account_subscription():
     auth_error = _require_radar_login_json()
     if auth_error:
         return auth_error
-    return jsonify(get_radar_subscription())
+    return jsonify(get_radar_subscription(session.get(RADAR_SESSION_SUBSCRIPTION_KEY, {})))
 
 @app.route('/api/account/usage')
 def api_account_usage():
@@ -1208,7 +1232,8 @@ def api_account_bills():
     auth_error = _require_radar_login_json()
     if auth_error:
         return auth_error
-    return jsonify(get_radar_bills())
+    current_user = _radar_current_session_user() or {}
+    return jsonify(get_radar_bills(current_user.get('email', '')))
 
 @app.route('/api/account')
 def api_account():
@@ -1216,7 +1241,33 @@ def api_account():
     auth_error = _require_radar_login_json()
     if auth_error:
         return auth_error
-    return jsonify(get_radar_account())
+    return jsonify(get_radar_account(
+        _radar_current_session_user(),
+        session.get(RADAR_SESSION_SUBSCRIPTION_KEY, {}),
+    ))
+
+@app.route('/api/payment/epay/notify', methods=['GET', 'POST'])
+def api_payment_epay_notify():
+    """易支付异步通知：验签成功后开通订阅，按协议返回 success。"""
+    params = request.values.to_dict(flat=True)
+    result = handle_radar_payment_notify(params)
+    if result.get('success'):
+        return Response('success', mimetype='text/plain')
+    logger.warning(f"易支付通知处理失败: {result.get('message')}")
+    return Response('fail', mimetype='text/plain', status=400)
+
+@app.route('/api/payment/epay/return', methods=['GET', 'POST'])
+def api_payment_epay_return():
+    """易支付同步返回：尽量更新当前会话后跳回账户页。"""
+    params = request.values.to_dict(flat=True)
+    result = handle_radar_payment_notify(params)
+    if result.get('success'):
+        current_user = _radar_current_session_user() or {}
+        order = result.get('order') or {}
+        if current_user.get('email') == order.get('user_email'):
+            session[RADAR_SESSION_SUBSCRIPTION_KEY] = result.get('subscription', {})
+        return redirect('/radar/account?payment=success')
+    return redirect('/radar/subscription?payment=failed')
 
 @app.route('/api/admin/overview')
 def api_admin_overview():
@@ -1314,6 +1365,26 @@ def api_admin_system_config():
     except Exception as exc:
         logger.exception("更新系统配置失败")
         return jsonify({'success': False, 'message': f'更新系统配置失败: {exc}'}), 500
+
+@app.route('/api/admin/system/email/test', methods=['POST'])
+def api_admin_system_email_test():
+    """发送 SMTP 测试邮件。"""
+    auth_error = _require_radar_admin_json()
+    if auth_error:
+        return auth_error
+    payload = request.get_json(silent=True) or {}
+    current_user = _radar_current_session_user() or {}
+    to_email = str(payload.get('to_email') or current_user.get('email') or '').strip()
+    if not to_email:
+        return jsonify({'success': False, 'message': '请填写测试收件邮箱'}), 400
+    try:
+        from SentimentRadar.email_service import send_test_email
+
+        send_test_email(to_email)
+        return jsonify({'success': True, 'message': f'测试邮件已发送至 {to_email}'})
+    except Exception as exc:
+        logger.exception("发送测试邮件失败")
+        return jsonify({'success': False, 'message': f'发送测试邮件失败: {exc}'}), 500
 
 @app.route('/api/admin/system/status')
 def api_admin_system_status():

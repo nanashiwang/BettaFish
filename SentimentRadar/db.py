@@ -140,6 +140,27 @@ _SCHEMAS = [
         UNIQUE (user_email, item_type, name)
     )
     """,
+    # 在线购买订单（易支付回调后开通订阅）
+    """
+    CREATE TABLE IF NOT EXISTS radar_orders (
+        id SERIAL PRIMARY KEY,
+        out_trade_no VARCHAR(64) NOT NULL UNIQUE,
+        user_email VARCHAR(255) NOT NULL,
+        user_name VARCHAR(100) NOT NULL DEFAULT '',
+        plan_id VARCHAR(32) NOT NULL,
+        plan_name VARCHAR(64) NOT NULL,
+        period VARCHAR(16) NOT NULL DEFAULT 'month',
+        amount NUMERIC(10, 2) NOT NULL,
+        subject VARCHAR(200) NOT NULL,
+        pay_type VARCHAR(32) NOT NULL DEFAULT 'alipay',
+        status VARCHAR(16) NOT NULL DEFAULT 'pending',
+        provider VARCHAR(32) NOT NULL DEFAULT 'epay',
+        provider_trade_no VARCHAR(128) NOT NULL DEFAULT '',
+        raw_notify JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        paid_at TIMESTAMP
+    )
+    """,
     # 话题补充价格 z 分（象限散点图使用）
     "ALTER TABLE radar_topics ADD COLUMN IF NOT EXISTS price_z DOUBLE PRECISION",
     # 预判卡补充个股观察池

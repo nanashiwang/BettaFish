@@ -7,6 +7,8 @@ POSTGRES_PORT_DEFAULT="5444"
 DRY_RUN=0
 SKIP_INSTALL=0
 SKIP_BUILD=0
+INSTALL_SHORTCUTS=1
+INSTALL_SYSTEMD=1
 
 log() { printf '\033[1;34m[%s]\033[0m %s\n' "$APP_NAME" "$*"; }
 warn() { printf '\033[1;33m[%s]\033[0m %s\n' "$APP_NAME" "$*" >&2; }
@@ -20,6 +22,8 @@ Options:
   --dry-run        Print actions without changing the server.
   --skip-install   Do not install or update server dependencies.
   --skip-build     Run docker compose up without rebuilding the image.
+  --no-shortcuts   Do not install the global bf command.
+  --no-systemd     Do not install systemd boot/health units.
   -h, --help       Show this help.
 
 Environment overrides:
@@ -33,6 +37,8 @@ while [[ $# -gt 0 ]]; do
     --dry-run) DRY_RUN=1 ;;
     --skip-install) SKIP_INSTALL=1 ;;
     --skip-build) SKIP_BUILD=1 ;;
+    --no-shortcuts) INSTALL_SHORTCUTS=0 ;;
+    --no-systemd) INSTALL_SYSTEMD=0 ;;
     -h|--help) usage; exit 0 ;;
     *) fail "Unknown option: $1" ;;
   esac
@@ -222,6 +228,12 @@ configure_env() {
   set_if_missing POSTGRES_PASSWORD "$pg_password"
   set_if_missing POSTGRES_DB "$pg_db"
   set_if_missing SECRET_KEY "$secret_key"
+  set_if_missing BETTAFISH_MEMORY_LIMIT "3g"
+  set_if_missing BETTAFISH_SWAP_LIMIT "4g"
+  set_if_missing BETTAFISH_LOG_MAX_SIZE "20m"
+  set_if_missing BETTAFISH_LOG_MAX_FILE "5"
+  set_if_missing POSTGRES_LOG_MAX_SIZE "10m"
+  set_if_missing POSTGRES_LOG_MAX_FILE "3"
 
   set_if_missing HOST "0.0.0.0"
   set_if_missing PORT "5000"
@@ -241,6 +253,30 @@ prepare_runtime_dirs() {
   for dir in logs final_reports insight_engine_streamlit_reports media_engine_streamlit_reports query_engine_streamlit_reports db_data; do
     run mkdir -p "$dir"
   done
+}
+
+install_shortcuts() {
+  [[ "$INSTALL_SHORTCUTS" == "1" ]] || { log "Skipping bf shortcut installation."; return 0; }
+  [[ -f "scripts/bf" ]] || { warn "scripts/bf not found; skipping shortcuts."; return 0; }
+
+  run chmod +x scripts/bf
+
+  if [[ "$DRY_RUN" == "1" ]]; then
+    log "+ install -m 0755 scripts/bf /usr/local/bin/bf"
+    log "+ write APP_DIR=$(pwd) to /etc/bettafish/bf.env"
+    [[ "$INSTALL_SYSTEMD" == "1" ]] && log "+ bf install-systemd"
+    return 0
+  fi
+
+  if [[ "$INSTALL_SYSTEMD" == "1" && -d /run/systemd/system && -x "$(command -v systemctl 2>/dev/null)" ]]; then
+    bash scripts/bf install-systemd || warn "Failed to install systemd units; bf command may still work from scripts/bf."
+    return 0
+  fi
+
+  sudo_run install -d -m 0755 /etc/bettafish
+  sudo_run install -m 0755 scripts/bf /usr/local/bin/bf
+  printf 'APP_DIR=%q\n' "$(pwd)" | sudo_run tee /etc/bettafish/bf.env >/dev/null
+  log "Installed /usr/local/bin/bf."
 }
 
 start_stack() {
@@ -281,6 +317,7 @@ main() {
   configure_env
   prepare_runtime_dirs
   start_stack
+  install_shortcuts
   health_check
 }
 

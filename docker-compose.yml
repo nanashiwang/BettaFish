@@ -8,6 +8,7 @@ services:
     # image: ghcr.nju.edu.cn/666ghj/bettafish:latest
     container_name: bettafish
     restart: unless-stopped
+    init: true
     env_file:
       - .env
     environment:
@@ -18,7 +19,23 @@ services:
       # 雷达注册用户库（容器内走 compose 网络访问 db 服务）
       - RADAR_DB_URL=postgresql+psycopg://${POSTGRES_USER:-bettafish}:${POSTGRES_PASSWORD:-bettafish}@db:5432/${POSTGRES_DB:-bettafish}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    mem_limit: ${BETTAFISH_MEMORY_LIMIT:-3g}
+    memswap_limit: ${BETTAFISH_SWAP_LIMIT:-4g}
+    oom_score_adj: -500
+    stop_grace_period: 120s
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5000/radar/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "${BETTAFISH_LOG_MAX_SIZE:-20m}"
+        max-file: "${BETTAFISH_LOG_MAX_FILE:-5}"
     ports:
       - "${APP_PORT:-5050}:5000"
       - "8501:8501"
@@ -36,6 +53,7 @@ services:
     image: postgres:15
     container_name: bettafish-db
     restart: unless-stopped
+    init: true
     env_file:
       - .env
     environment:
@@ -46,3 +64,14 @@ services:
       - "${POSTGRES_PORT:-5444}:5432"
     volumes:
       - ./db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-bettafish} -d $${POSTGRES_DB:-bettafish}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "${POSTGRES_LOG_MAX_SIZE:-10m}"
+        max-file: "${POSTGRES_LOG_MAX_FILE:-3}"

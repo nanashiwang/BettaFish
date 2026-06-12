@@ -315,6 +315,28 @@ bash scripts/deploy.sh --dry-run         # 仅查看将执行的动作
 
 首次进入 `/radar/register` 注册的账号会成为超级管理员。登录后进入「平台设置」，再补充 OpenAI 兼容接口、Tushare Token、SMTP、支付网关等需要自定义的 URL / Key。
 
+部署脚本还会安装系统级快捷命令 `bf`：
+
+```bash
+bf update              # 拉取最新代码，自动检查依赖并重新部署
+bf restart             # 重启服务
+bf stop                # 停止服务
+bf start               # 启动服务
+bf status              # 查看容器状态和内存占用
+bf logs                # 查看主服务日志
+bf heal                # 健康检查，异常时自动拉起/重启
+bf enable-auto-update  # 启用每天 04:30 的系统级自动更新定时器
+bf disable-auto-update # 关闭自动更新定时器
+bf uninstall           # 移除 bf 命令和 systemd 单元，不删除项目数据
+```
+
+稳定性保护：
+
+- `docker-compose.yml` 已启用 `restart: unless-stopped`、健康检查、日志轮转和 PostgreSQL 健康依赖；
+- 主服务默认设置 `BETTAFISH_MEMORY_LIMIT=3g`、`BETTAFISH_SWAP_LIMIT=4g`，并降低 OOM killer 优先级；
+- systemd 会安装 `bettafish-health.timer`，每分钟执行一次 `bf heal`，容器退出、`unhealthy` 或 `/radar/` 不通时会自动恢复；
+- 自动更新定时器默认只安装不启用，需要明确执行 `bf enable-auto-update`。
+
 ### 2. 手动启动项目
 
 复制一份 `.env.example` 文件，命名为 `.env` ，并按需配置 `.env` 文件中的环境变量

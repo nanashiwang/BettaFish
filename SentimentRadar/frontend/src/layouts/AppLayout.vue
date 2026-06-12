@@ -51,7 +51,7 @@
 
         <div class="side-group">
           <div class="side-label">工作台</div>
-          <router-link to="/today" class="side-item" active-class="active">
+          <router-link to="/today" class="side-item" :class="{ active: todaySignalActive }">
             <span class="side-icon">▣</span><span class="side-text">今日信号</span>
           </router-link>
           <button
@@ -103,6 +103,7 @@ const router = useRouter()
 const sidebarCollapsed = ref(false)
 
 const avatarText = computed(() => auth.user?.name?.charAt(0) ?? '用')
+const todaySignalActive = computed(() => route.path === '/today' && route.query.tab !== 'my')
 const myFocusActive = computed(() => route.path === '/today' && route.query.tab === 'my')
 
 async function goMyFocus() {

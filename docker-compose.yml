@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   bettafish:
     build: .
@@ -10,6 +8,8 @@ services:
     # image: ghcr.nju.edu.cn/666ghj/bettafish:latest
     container_name: bettafish
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - PYTHONUNBUFFERED=1
       - STREAMLIT_SERVER_ENABLE_FILE_WATCHER=false
@@ -20,8 +20,7 @@ services:
     depends_on:
       - db
     ports:
-      # 宿主机 5000 被 macOS 隔空播放（AirPlay）占用，改用 5050 访问
-      - "5050:5000"
+      - "${APP_PORT:-5050}:5000"
       - "8501:8501"
       - "8502:8502"
       - "8503:8503"

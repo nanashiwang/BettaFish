@@ -287,7 +287,35 @@ BettaFish/
 
 ## 🚀 快速开始（Docker）
 
-### 1. 启动项目
+### 1. 一键部署（推荐）
+
+在服务器上克隆项目后，进入项目根目录执行：
+
+```bash
+bash scripts/deploy.sh
+```
+
+脚本会自动完成：
+
+- 检查并安装/更新 `git`、`curl`、`openssl`、Docker 与 Docker Compose 插件；
+- 从 `.env.example` 生成 `.env`；
+- 自动生成内部数据库密码、`SECRET_KEY` 等无需手动记忆的部署密钥；
+- 保留 LLM、搜索、SMTP、支付网关等业务接口为空，后续可在「平台设置」UI 中配置；
+- 构建镜像（包含自动构建 `SentimentRadar/frontend` 的 Vue 前端）并启动 PostgreSQL + BettaFish；
+- 默认访问地址为 `http://服务器IP:5050/`，雷达平台为 `http://服务器IP:5050/radar/`。
+
+可选参数：
+
+```bash
+APP_PORT=8080 bash scripts/deploy.sh     # 修改宿主机访问端口
+bash scripts/deploy.sh --skip-install    # 已安装 Docker 时跳过依赖安装
+bash scripts/deploy.sh --skip-build      # 只启动，不重新构建镜像
+bash scripts/deploy.sh --dry-run         # 仅查看将执行的动作
+```
+
+首次进入 `/radar/register` 注册的账号会成为超级管理员。登录后进入「平台设置」，再补充 OpenAI 兼容接口、Tushare Token、SMTP、支付网关等需要自定义的 URL / Key。
+
+### 2. 手动启动项目
 
 复制一份 `.env.example` 文件，命名为 `.env` ，并按需配置 `.env` 文件中的环境变量
 
@@ -299,7 +327,7 @@ docker compose up -d
 
 > **注：镜像拉取速度慢**，在原 `docker-compose.yml` 文件中，我们已经通过**注释**的方式提供了备用镜像地址供您替换
 
-### 2. 配置说明
+### 3. 配置说明
 
 #### 数据库配置（PostgreSQL）
 

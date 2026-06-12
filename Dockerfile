@@ -1,3 +1,13 @@
+FROM node:22-slim AS radar-frontend
+
+WORKDIR /src/SentimentRadar/frontend
+
+COPY SentimentRadar/frontend/package*.json ./
+RUN npm ci
+
+COPY SentimentRadar/frontend/ ./
+RUN npm run build
+
 FROM python:3.11-slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -68,6 +78,9 @@ COPY .env.example .env
 
 # Copy application source
 COPY . .
+
+# Bundle the Vue radar console during image build so server deploys only need Docker.
+COPY --from=radar-frontend /src/static/radar /app/static/radar
 
 # Ensure runtime directories exist even if ignored in build context
 RUN mkdir -p /ms-playwright logs final_reports insight_engine_streamlit_reports media_engine_streamlit_reports query_engine_streamlit_reports

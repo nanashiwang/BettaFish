@@ -62,7 +62,10 @@ except ImportError as e:
     REPORT_ENGINE_AVAILABLE = False
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'Dedicated-to-creating-a-concise-and-versatile-public-opinion-analysis-platform'
+app.config['SECRET_KEY'] = os.getenv(
+    'SECRET_KEY',
+    'Dedicated-to-creating-a-concise-and-versatile-public-opinion-analysis-platform',
+)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # eventlet 在客户端主动断开时偶尔会抛出 ConnectionAbortedError，这里做一次防御性包裹，

@@ -72,7 +72,7 @@
               </div>
 
               <div v-else-if="activeSignalTab === 'quadrant'" class="quadrant-workbench">
-                <QuadrantChart :points="quadrantPoints" />
+                <QuadrantChart :points="stockScatterPoints" />
                 <div class="quadrant-stat-grid">
                   <div v-for="stat in quadrantStats" :key="stat.label" class="quadrant-stat">
                     <span>{{ stat.label }}</span><b class="num">{{ stat.value }}</b><small>{{ stat.text }}</small>
@@ -123,7 +123,7 @@
                 <i />
                 <div>
                   <strong>今日 {{ updatedTime }} 成功</strong>
-                  <p>生成 {{ today.cards.length }} 张预判卡，覆盖 {{ today.signals_scatter.length }} 个信号点。</p>
+                  <p>生成 {{ today.cards.length }} 张预判卡，覆盖 {{ stockScatterPoints.length }} 只候选股。</p>
                 </div>
               </div>
               <div class="timeline-item warn">
@@ -200,9 +200,9 @@
           </div>
 
           <div class="glass-card side-panel chart-panel fade-up fade-up-4">
-            <div class="panel-head"><span>信号象限图</span></div>
-            <QuadrantChart :points="quadrantPoints" />
-            <p class="faint quadrant-hint">左上为「先闻后动」机会区：舆情升温而板块未动。</p>
+            <div class="panel-head"><span>个股候选象限图</span></div>
+            <QuadrantChart :points="stockScatterPoints" />
+            <p class="faint quadrant-hint">左上优先看「补涨观察」：主题热度高、个股 3 日涨幅仍低。</p>
           </div>
 
           <div class="glass-card side-panel plan-note fade-up fade-up-4">
@@ -242,7 +242,7 @@
 
     <template v-else-if="today && today.cards.length">
       <section class="quick-grid fade-up fade-up-1">
-        <div class="quick-card glass-card"><span>今日强信号</span><b class="num">{{ today.cards.length }}</b><small>当前页面直接查看预判卡</small></div>
+        <div class="quick-card glass-card"><span>今日强信号</span><b class="num">{{ today.cards.length }}</b><small>{{ stockScatterPoints.length }} 只候选股待观察</small></div>
         <div class="quick-card glass-card"><span>我的关注命中</span><b class="num">{{ today.my_related.items[0]?.value || today.my_related.highlight || '0' }}</b><small>{{ today.my_related.summary || '股票 · 主题 · 板块' }}</small></div>
         <div class="quick-card glass-card"><span>证据样本</span><b class="num">{{ evidenceTotal.toLocaleString() }}</b><small>新闻 / 公告 / 社媒 / 行情</small></div>
       </section>
@@ -258,6 +258,13 @@
           <div class="glass-card panel">
             <div class="panel-head"><span>我的关注</span><button type="button" class="link-btn" @click="showSettings = !showSettings">管理</button></div>
             <div class="panel-body"><MyFocusPanel @go-settings="showSettings = true" /></div>
+          </div>
+          <div class="glass-card panel stock-quadrant-card">
+            <div class="panel-head"><span>个股候选象限</span><small>主题热度 × 个股涨幅</small></div>
+            <div class="panel-body">
+              <QuadrantChart :points="stockScatterPoints" />
+              <p class="quadrant-hint">左上优先看「补涨观察」：主题热度高、个股 3 日涨幅仍低。</p>
+            </div>
           </div>
           <details class="glass-card panel settings-fold" :open="showSettings">
             <summary @click.prevent="showSettings = !showSettings">关注管理 / 推送提醒</summary>
@@ -280,7 +287,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 import { fetchToday } from '../../api/radar'
-import type { TodayBriefing } from '../../api/types'
+import type { StockScatterPoint, TodayBriefing } from '../../api/types'
 import { useAuthStore } from '../../stores/auth'
 import PredictionCard from '../../components/today/PredictionCard.vue'
 import EvidenceDrawer from '../../components/today/EvidenceDrawer.vue'
@@ -297,23 +304,11 @@ const drawerVisible = ref(false)
 const activeCardId = ref('')
 const showSettings = ref(route.query.tab === 'my')
 type SignalTab = 'cards' | 'heat' | 'quadrant' | 'evidence'
-type CompatibleScatterPoint = {
-  name: string
-  code: string
-  label: string
-  topic: string
-  scenario: string
-  heat_z: number
-  price_z: number
-  return_3d: number | null
-  return_5d: number | null
-  volume_ratio: number
-}
 const activeSignalTab = ref<SignalTab>('cards')
 const signalTabs: { label: string; value: SignalTab }[] = [
   { label: '预判卡', value: 'cards' },
   { label: '热度排序', value: 'heat' },
-  { label: '背离象限', value: 'quadrant' },
+  { label: '个股象限', value: 'quadrant' },
   { label: '证据链', value: 'evidence' },
 ]
 const isConsole = computed(() => route.name === 'console')
@@ -345,34 +340,43 @@ const activeSignalMeta = computed(() => {
   const meta: Record<SignalTab, { title: string; description: string; badge: string }> = {
     cards: { title: `舆情-价格背离 Top${total}`, description: today.value?.headline || '今日强信号预判卡', badge: '主视窗' },
     heat: { title: '热度排序', description: '按舆情热度 z 分倒序排列，点击行可展开证据链。', badge: '可点击' },
-    quadrant: { title: '背离象限', description: '横轴价格、纵轴热度，优先关注左上「先闻后动」机会区。', badge: '象限视图' },
+    quadrant: { title: '个股候选象限', description: '横轴个股 3 日涨幅、纵轴主题热度，优先关注热度高但涨幅低的补涨观察。', badge: '候选股' },
     evidence: { title: '证据链', description: '按信号聚合新闻、公告、社媒与行情证据，点击查看详情。', badge: '来源追踪' },
   }
   return meta[activeSignalTab.value]
 })
 
 const quadrantStats = computed(() => {
-  const points = today.value?.signals_scatter ?? []
+  const points = stockScatterPoints.value
   return [
-    { label: '机会区', value: points.filter((p) => p.heat_z > 0 && p.price_z < 0).length, text: '热度先行' },
-    { label: '共振区', value: points.filter((p) => p.heat_z > 0 && p.price_z > 0).length, text: '热价同步' },
-    { label: '警惕区', value: points.filter((p) => p.heat_z < 0 && p.price_z > 0).length, text: '价格先动' },
+    { label: '补涨观察', value: points.filter((p) => p.label === '补涨观察').length, text: '热度高涨幅低' },
+    { label: '先动股', value: points.filter((p) => p.label === '先动股').length, text: '价格已启动' },
+    { label: '风险股', value: points.filter((p) => p.label === '高位风险' || p.label === '弱势回避').length, text: '兑现或回避' },
   ]
 })
 
-
-const quadrantPoints = computed<CompatibleScatterPoint[]>(() => (
-  today.value?.signals_scatter.map((point) => ({
-    ...point,
-    code: point.name,
-    label: point.scenario === '先动后闻' ? '高位风险' : point.scenario === '先闻后动' ? '补涨观察' : '观察',
-    topic: point.name,
-    scenario: point.scenario || '无显著信号',
-    return_3d: point.price_z,
-    return_5d: null,
-    volume_ratio: 1,
-  })) ?? []
-))
+const stockScatterPoints = computed<StockScatterPoint[]>(() => {
+  const points: StockScatterPoint[] = []
+  const seen = new Set<string>()
+  for (const card of today.value?.cards ?? []) {
+    for (const stock of card.stock_candidates ?? []) {
+      if (seen.has(stock.code)) continue
+      seen.add(stock.code)
+      points.push({
+        name: stock.name,
+        code: stock.code,
+        label: stock.label,
+        topic: card.title,
+        scenario: card.scenario,
+        heat_z: card.heat_z ?? 0,
+        return_3d: stock.return_3d,
+        return_5d: stock.return_5d,
+        volume_ratio: stock.volume_ratio,
+      })
+    }
+  }
+  return points
+})
 
 const metricCards = computed(() => {
   const data = today.value
@@ -380,8 +384,8 @@ const metricCards = computed(() => {
   return [
     {
       label: '今日信号',
-      value: `${data.cards.length} / ${Math.max(data.signals_scatter.length, data.cards.length)}`,
-      sub: '强信号 / 总信号',
+      value: `${data.cards.length} / ${stockScatterPoints.value.length}`,
+      sub: '预判卡 / 候选股',
       icon: '⌁',
       tone: 'blue',
     },
@@ -558,6 +562,12 @@ onMounted(() => loadToday())
   padding: 0 16px;
   border-bottom: 1px solid var(--border);
   font-weight: 800;
+}
+
+.panel-head small {
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .panel-tabs {
@@ -872,6 +882,16 @@ onMounted(() => loadToday())
 
 .chart-panel :deep(.quadrant-chart) {
   height: 260px;
+}
+
+.stock-quadrant-card :deep(.quadrant-chart) {
+  height: 280px;
+}
+
+.stock-quadrant-card .quadrant-hint {
+  margin: 10px 0 0;
+  color: var(--text-faint);
+  line-height: 1.6;
 }
 
 .quadrant-hint {

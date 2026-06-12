@@ -88,6 +88,18 @@ export interface ScatterPoint {
   scenario: string | null
 }
 
+export interface StockScatterPoint {
+  name: string
+  code: string
+  label: string
+  topic: string
+  scenario: string
+  heat_z: number
+  return_3d: number | null
+  return_5d: number | null
+  volume_ratio: number
+}
+
 export interface TodayBriefing extends ApiResult {
   updated_at: string
   product: string

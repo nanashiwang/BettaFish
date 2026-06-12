@@ -4,46 +4,73 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { ScatterPoint } from '../../api/types'
+import type { ScatterPoint, StockScatterPoint } from '../../api/types'
 
-const props = defineProps<{ points: ScatterPoint[] }>()
+type QuadrantPoint = StockScatterPoint | ScatterPoint
 
-const SCENARIO_COLORS: Record<string, string> = {
-  先闻后动: '#3BA4F7',
-  同步共振: '#2DD4BF',
-  先动后闻: '#fbbf24',
+const props = defineProps<{ points: QuadrantPoint[] }>()
+
+const LABEL_COLORS: Record<string, string> = {
+  补涨观察: '#2DD4BF',
+  先动股: '#fbbf24',
+  高位风险: '#F05252',
+  弱势回避: '#94A3B8',
+  观察: '#3BA4F7',
 }
 
 const option = computed(() => {
   const values = props.points
-  const maxAbs = Math.max(2.5, ...values.flatMap((p) => [Math.abs(p.heat_z), Math.abs(p.price_z)])) * 1.15
+  const returns = values.map((p) => pointReturn3d(p))
+  const heats = values.map((p) => p.heat_z ?? 0)
+  const xMin = Math.min(-3, ...returns) - 1
+  const xMax = Math.max(8, ...returns) + 1
+  const yMin = Math.min(-1, ...heats) - 0.5
+  const yMax = Math.max(2.5, ...heats) + 0.5
   return {
     backgroundColor: 'transparent',
     grid: { left: 44, right: 20, top: 28, bottom: 36 },
+    graphic: values.length
+      ? []
+      : [
+          {
+            type: 'text',
+            left: 'center',
+            top: 'middle',
+            style: {
+              text: '暂无个股候选数据',
+              fill: '#64748B',
+              fontSize: 13,
+            },
+          },
+        ],
     tooltip: {
       backgroundColor: '#101826',
       borderColor: '#2A3648',
       textStyle: { color: '#F1F5F9', fontSize: 12 },
-      formatter: (params: { data: { point: ScatterPoint } }) => {
+      formatter: (params: { data: { point: QuadrantPoint } }) => {
         const p = params.data.point
-        return `<b>${p.name}</b><br/>热度 z：${p.heat_z}<br/>价格 z：${p.price_z}<br/>${p.scenario ?? '无显著信号'}`
+        return `<b>${p.name} ${pointCode(p)}</b><br/>主题：${pointTopic(p)}<br/>场景：${p.scenario ?? '无显著信号'}<br/>标签：${pointLabel(p)}<br/>主题热度 z：${p.heat_z}<br/>个股 3 日：${formatPct(pointReturn3d(p))}<br/>个股 5 日：${formatPct(pointReturn5d(p))}<br/>量比：${pointVolumeRatio(p)}`
       },
     },
     xAxis: {
-      name: '价格 z 分 →',
+      name: '个股 3 日涨幅 →',
       nameLocation: 'end',
       nameTextStyle: { color: '#64748B', fontSize: 11 },
-      min: -maxAbs,
-      max: maxAbs,
+      min: xMin,
+      max: xMax,
       axisLine: { lineStyle: { color: '#2A3648' } },
-      axisLabel: { color: '#64748B', fontSize: 10 },
+      axisLabel: {
+        color: '#64748B',
+        fontSize: 10,
+        formatter: (value: number) => `${value}%`,
+      },
       splitLine: { show: false },
     },
     yAxis: {
-      name: '热度 z 分 ↑',
+      name: '主题热度 z 分 ↑',
       nameTextStyle: { color: '#64748B', fontSize: 11 },
-      min: -maxAbs,
-      max: maxAbs,
+      min: yMin,
+      max: yMax,
       axisLine: { lineStyle: { color: '#2A3648' } },
       axisLabel: { color: '#64748B', fontSize: 10 },
       splitLine: { show: false },
@@ -51,14 +78,17 @@ const option = computed(() => {
     series: [
       {
         type: 'scatter',
-        symbolSize: 14,
+        symbolSize: (value: number[], params: { data: { point: QuadrantPoint } }) => {
+          const ratio = pointVolumeRatio(params.data.point)
+          return Math.max(10, Math.min(24, 10 + ratio * 4))
+        },
         data: values.map((p) => ({
-          value: [p.price_z, p.heat_z],
+          value: [pointReturn3d(p), p.heat_z],
           point: p,
           itemStyle: {
-            color: p.scenario ? SCENARIO_COLORS[p.scenario] ?? '#64748B' : 'rgba(100,116,139,0.6)',
-            shadowBlur: p.scenario ? 12 : 0,
-            shadowColor: p.scenario ? SCENARIO_COLORS[p.scenario] ?? 'transparent' : 'transparent',
+            color: LABEL_COLORS[pointLabel(p)] ?? '#64748B',
+            shadowBlur: pointLabel(p) === '补涨观察' || pointLabel(p) === '高位风险' ? 12 : 0,
+            shadowColor: LABEL_COLORS[pointLabel(p)] ?? 'transparent',
           },
         })),
         label: {
@@ -66,14 +96,14 @@ const option = computed(() => {
           position: 'top',
           color: '#94A3B8',
           fontSize: 10,
-          formatter: (params: { data: { point: ScatterPoint } }) => params.data.point.name,
+          formatter: (params: { data: { point: QuadrantPoint } }) => params.data.point.name,
         },
         markLine: {
           silent: true,
           symbol: 'none',
           label: { show: false },
           lineStyle: { color: '#2A3648', type: 'dashed' },
-          data: [{ xAxis: 0 }, { yAxis: 0 }],
+          data: [{ xAxis: 0 }, { yAxis: 0.8 }, { xAxis: 8 }],
         },
         markArea: {
           silent: true,
@@ -86,8 +116,12 @@ const option = computed(() => {
           },
           data: [
             [
-              { name: '先闻后动 · 机会区', xAxis: -maxAbs, yAxis: maxAbs },
-              { xAxis: 0, yAxis: 0.8 },
+              { name: '补涨观察 · 热度先行', xAxis: -2, yAxis: yMax },
+              { xAxis: 3, yAxis: 0.8 },
+            ],
+            [
+              { name: '高位风险 · 价格先动', xAxis: 8, yAxis: yMax },
+              { xAxis: xMax, yAxis: 0.8 },
             ],
           ],
         },
@@ -95,6 +129,42 @@ const option = computed(() => {
     ],
   }
 })
+
+function formatPct(value: number | null) {
+  if (value == null) return '-'
+  return `${value > 0 ? '+' : ''}${value}%`
+}
+
+function isStockPoint(point: QuadrantPoint): point is StockScatterPoint {
+  return 'return_3d' in point
+}
+
+function pointCode(point: QuadrantPoint) {
+  return isStockPoint(point) ? point.code : ''
+}
+
+function pointTopic(point: QuadrantPoint) {
+  return isStockPoint(point) ? point.topic : point.name
+}
+
+function pointLabel(point: QuadrantPoint) {
+  if (isStockPoint(point)) return point.label
+  if (point.scenario === '先动后闻') return '高位风险'
+  if (point.scenario === '先闻后动') return '补涨观察'
+  return '观察'
+}
+
+function pointReturn3d(point: QuadrantPoint) {
+  return isStockPoint(point) ? point.return_3d ?? 0 : point.price_z
+}
+
+function pointReturn5d(point: QuadrantPoint) {
+  return isStockPoint(point) ? point.return_5d : null
+}
+
+function pointVolumeRatio(point: QuadrantPoint) {
+  return isStockPoint(point) ? point.volume_ratio || 1 : 1
+}
 </script>
 
 <style scoped>

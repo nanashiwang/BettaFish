@@ -219,6 +219,7 @@ onMounted(loadToday)
   justify-content: space-between;
   gap: 16px;
   padding: 22px;
+  color: #f8fafc;
   background:
     radial-gradient(circle at 88% 10%, rgba(59, 164, 247, 0.2), transparent 34%),
     linear-gradient(135deg, rgba(16, 24, 38, 0.98), rgba(13, 20, 32, 0.92));
@@ -233,13 +234,14 @@ onMounted(loadToday)
 
 .candidate-hero h1 {
   margin: 8px 0;
+  color: #f8fafc;
   font-size: 30px;
 }
 
 .candidate-hero p {
   max-width: 760px;
   margin: 0;
-  color: var(--text-muted);
+  color: rgba(219, 234, 254, 0.82);
   line-height: 1.7;
 }
 

@@ -763,7 +763,7 @@ async function handleSave() {
   border: 1px solid transparent;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.035);
-  color: var(--text-secondary);
+  color: rgba(219, 234, 254, 0.82);
   cursor: pointer;
   font: inherit;
   text-align: left;
@@ -772,7 +772,7 @@ async function handleSave() {
 
 .module-tabs button:hover,
 .module-tabs button.active {
-  color: var(--text-primary);
+  color: #f8fafc;
   border-color: rgba(59, 164, 247, 0.48);
   background: linear-gradient(135deg, rgba(59, 164, 247, 0.18), rgba(45, 212, 191, 0.08));
 }
@@ -977,6 +977,7 @@ async function handleSave() {
   border: 1px solid var(--border);
   border-radius: 14px;
   background: rgba(10, 15, 26, 0.88);
+  color: #f8fafc;
   backdrop-filter: blur(16px);
 }
 

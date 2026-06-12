@@ -752,8 +752,8 @@ async function handleSave() {
   border: 1px solid var(--border);
   border-radius: 16px;
   background:
-    radial-gradient(circle at 8% 0%, rgba(59, 164, 247, 0.12), transparent 32%),
-    rgba(10, 15, 26, 0.9);
+    radial-gradient(circle at 8% 0%, var(--brand-dim), transparent 32%),
+    var(--bg-elevated);
   backdrop-filter: blur(18px);
 }
 
@@ -762,8 +762,8 @@ async function handleSave() {
   padding: 10px 12px;
   border: 1px solid transparent;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.035);
-  color: rgba(219, 234, 254, 0.82);
+  background: var(--control-bg);
+  color: var(--text-secondary);
   cursor: pointer;
   font: inherit;
   text-align: left;
@@ -772,7 +772,7 @@ async function handleSave() {
 
 .module-tabs button:hover,
 .module-tabs button.active {
-  color: #f8fafc;
+  color: var(--text-primary);
   border-color: rgba(59, 164, 247, 0.48);
   background: linear-gradient(135deg, rgba(59, 164, 247, 0.18), rgba(45, 212, 191, 0.08));
 }
@@ -976,8 +976,8 @@ async function handleSave() {
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: rgba(10, 15, 26, 0.88);
-  color: #f8fafc;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
   backdrop-filter: blur(16px);
 }
 

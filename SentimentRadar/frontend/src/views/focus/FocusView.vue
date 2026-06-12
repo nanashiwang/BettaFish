@@ -58,10 +58,7 @@ async function scrollToSettings() {
   justify-content: space-between;
   gap: 16px;
   padding: 22px;
-  color: #f8fafc;
-  background:
-    radial-gradient(circle at 86% 14%, rgba(45, 212, 191, 0.18), transparent 34%),
-    linear-gradient(135deg, rgba(16, 24, 38, 0.96), rgba(13, 20, 32, 0.92));
+  background: var(--hero-bg);
 }
 
 .eyebrow {
@@ -73,14 +70,14 @@ async function scrollToSettings() {
 
 .focus-hero h1 {
   margin: 8px 0;
-  color: #f8fafc;
+  color: var(--text-primary);
   font-size: 30px;
 }
 
 .focus-hero p {
   max-width: 680px;
   margin: 0;
-  color: rgba(219, 234, 254, 0.82);
+  color: var(--text-muted);
   line-height: 1.7;
 }
 

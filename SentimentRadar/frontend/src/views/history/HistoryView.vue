@@ -393,9 +393,16 @@ onMounted(async () => {
   justify-content: center;
   gap: 8px;
   padding: 16px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--glass-border));
   border-radius: 12px;
-  background: rgba(10, 15, 26, 0.42);
+  background:
+    radial-gradient(circle at 88% 10%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 42%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--brand) 12%, var(--bg-elevated)),
+      color-mix(in srgb, var(--brand-secondary) 10%, var(--bg-elevated))
+    );
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
 }
 
 .hero-insight small,
@@ -488,7 +495,9 @@ onMounted(async () => {
 }
 
 .scenario-item.active {
-  box-shadow: inset 0 0 0 1px var(--scenario-color), 0 14px 30px rgba(0, 0, 0, 0.22);
+  box-shadow:
+    inset 0 0 0 1px var(--scenario-color),
+    0 14px 30px color-mix(in srgb, var(--scenario-color) 18%, transparent);
 }
 
 .scenario-item b,
@@ -524,8 +533,9 @@ onMounted(async () => {
 
 .filter-summary span {
   padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--brand) 14%, transparent);
   border-radius: 999px;
-  background: rgba(10, 15, 26, 0.36);
+  background: color-mix(in srgb, var(--brand) 8%, var(--bg-elevated));
 }
 
 .replay-note {
@@ -607,8 +617,11 @@ onMounted(async () => {
   gap: 2px;
   justify-items: end;
   padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--scenario-color) 22%, transparent);
   border-radius: 12px;
-  background: rgba(10, 15, 26, 0.42);
+  background:
+    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--scenario-color) 16%, transparent), transparent 50%),
+    color-mix(in srgb, var(--scenario-color) 8%, var(--bg-elevated));
 }
 
 .result-pill small {

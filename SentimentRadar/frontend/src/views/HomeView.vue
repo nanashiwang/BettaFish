@@ -202,9 +202,9 @@ const SAMPLE_CARDS: PredictionCardType[] = [
   padding: 0 32px;
   position: sticky;
   top: 0;
-  background: rgba(10, 15, 26, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--nav-glass-bg);
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
   border-bottom: 1px solid var(--glass-border);
   z-index: 10;
 }
@@ -220,7 +220,7 @@ const SAMPLE_CARDS: PredictionCardType[] = [
   height: 36px;
   border-radius: 11px;
   background: linear-gradient(135deg, var(--brand), #0d9488);
-  color: #04211d;
+  color: var(--auth-logo-text);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -237,9 +237,7 @@ const SAMPLE_CARDS: PredictionCardType[] = [
 .hero {
   text-align: center;
   padding: 96px 24px 72px;
-  background:
-    radial-gradient(700px 400px at 50% 0%, rgba(45, 212, 191, 0.1), transparent 65%),
-    linear-gradient(170deg, #0a0f1a 0%, #0d1b2a 60%, #0a0f1a 100%);
+  background: var(--hero-bg);
   color: var(--text-primary);
   position: relative;
   overflow: hidden;

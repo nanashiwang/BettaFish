@@ -1,28 +1,37 @@
 /* ============================================================
-   舆情雷达 · 深色金融终端设计系统
+   舆情雷达 · Apple 风玻璃设计系统
    ============================================================ */
 
 :root {
-  /* 用户指定色板 */
-  --bg-page: #0a0f1a;
-  --bg-panel: #101826;
-  --bg-elevated: #151e2d;
-  --bg-hover: #1b2638;
-  --border: #2a3648;
+  /* 默认浅色：更接近 iOS / macOS 的明亮玻璃层级 */
+  --bg-page: #f5f7fb;
+  --bg-panel: rgba(255, 255, 255, 0.74);
+  --bg-elevated: rgba(255, 255, 255, 0.9);
+  --bg-hover: rgba(239, 246, 255, 0.88);
+  --border: rgba(148, 163, 184, 0.28);
 
   /* 卡片层级 */
-  --glass-bg: #151e2d;
-  --glass-bg-hover: #1b2638;
-  --glass-border: #2a3648;
-  --glass-highlight: rgba(241, 245, 249, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.68);
+  --glass-bg-hover: rgba(255, 255, 255, 0.84);
+  --glass-border: rgba(255, 255, 255, 0.72);
+  --glass-highlight: rgba(255, 255, 255, 0.92);
+  --glass-shadow: 0 22px 70px rgba(59, 130, 246, 0.13), 0 10px 28px rgba(15, 23, 42, 0.08);
+  --glass-shadow-hover: 0 28px 86px rgba(59, 130, 246, 0.18), 0 14px 34px rgba(15, 23, 42, 0.1);
+  --nav-glass-bg: rgba(255, 255, 255, 0.72);
+  --hero-bg:
+    radial-gradient(circle at 84% 16%, rgba(20, 126, 245, 0.14), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(229, 241, 255, 0.66));
+  --control-bg: rgba(255, 255, 255, 0.68);
+  --control-bg-hover: rgba(255, 255, 255, 0.92);
+  --control-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88), 0 8px 22px rgba(15, 23, 42, 0.08);
 
   /* 品牌与强调 */
-  --brand: #3ba4f7;
-  --brand-dim: rgba(59, 164, 247, 0.16);
-  --brand-secondary: #2dd4bf;
-  --brand-secondary-dim: rgba(45, 212, 191, 0.16);
-  --accent: #7c9cf5;
-  --accent-dim: rgba(124, 156, 245, 0.16);
+  --brand: #147ef5;
+  --brand-dim: rgba(20, 126, 245, 0.13);
+  --brand-secondary: #00b8a9;
+  --brand-secondary-dim: rgba(0, 184, 169, 0.12);
+  --accent: #6e8efb;
+  --accent-dim: rgba(110, 142, 251, 0.14);
 
   /* 涨跌（A 股惯例：红涨绿跌） */
   --up: #f05252;
@@ -32,23 +41,89 @@
   --danger: #dc2626;
 
   /* 场景色 */
-  --scenario-news-first: #3ba4f7; /* 先闻后动：机会 */
-  --scenario-resonance: #2dd4bf;  /* 同步共振：确认 */
-  --scenario-move-first: #fbbf24; /* 先动后闻：警惕 */
+  --scenario-news-first: #147ef5; /* 先闻后动：机会 */
+  --scenario-resonance: #00b8a9;  /* 同步共振：确认 */
+  --scenario-move-first: #f59e0b; /* 先动后闻：警惕 */
 
   /* 文本 */
-  --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-faint: #64748b;
+  --text-primary: #111827;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
 
   /* 兼容旧变量名 */
-  --radar-brand: #3ba4f7;
-  --radar-bg: #0a0f1a;
+  --radar-brand: var(--brand);
+  --radar-bg: var(--bg-page);
+  --auth-bg:
+    radial-gradient(820px 560px at 74% 18%, rgba(20, 126, 245, 0.12), transparent 62%),
+    radial-gradient(680px 520px at 12% 86%, rgba(0, 184, 169, 0.12), transparent 60%),
+    linear-gradient(150deg, #fbfdff 0%, #edf6ff 52%, #f8f3ff 100%);
+  --auth-card-bg: rgba(255, 255, 255, 0.68);
+  --auth-logo-text: #ffffff;
+
+  /* Element Plus 浅色玻璃变量 */
+  --el-bg-color: rgba(255, 255, 255, 0.86);
+  --el-bg-color-overlay: rgba(255, 255, 255, 0.94);
+  --el-fill-color: rgba(248, 250, 252, 0.78);
+  --el-fill-color-light: rgba(239, 246, 255, 0.72);
+  --el-fill-color-blank: rgba(255, 255, 255, 0.78);
+  --el-border-color: var(--border);
+  --el-border-color-light: var(--border);
+  --el-border-color-lighter: rgba(203, 213, 225, 0.46);
+  --el-color-primary: var(--brand);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-text-color-secondary: var(--text-muted);
+  --el-mask-color: rgba(248, 250, 252, 0.72);
+  --el-disabled-bg-color: rgba(226, 232, 240, 0.5);
 }
 
-/* ---------- Element Plus 深色变量对齐 ---------- */
 html.dark {
+  --bg-page: #111827;
+  --bg-panel: rgba(17, 24, 39, 0.76);
+  --bg-elevated: rgba(30, 41, 59, 0.78);
+  --bg-hover: rgba(51, 65, 85, 0.72);
+  --border: rgba(148, 163, 184, 0.22);
+
+  --glass-bg: rgba(30, 41, 59, 0.58);
+  --glass-bg-hover: rgba(30, 41, 59, 0.74);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.14);
+  --glass-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+  --glass-shadow-hover: 0 28px 82px rgba(0, 0, 0, 0.42);
+  --nav-glass-bg: rgba(15, 23, 42, 0.72);
+  --hero-bg:
+    radial-gradient(circle at 84% 16%, rgba(77, 163, 255, 0.18), transparent 34%),
+    linear-gradient(135deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.72));
+  --control-bg: rgba(30, 41, 59, 0.66);
+  --control-bg-hover: rgba(51, 65, 85, 0.76);
+  --control-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.2);
+
+  --brand: #4da3ff;
+  --brand-dim: rgba(77, 163, 255, 0.16);
+  --brand-secondary: #39d7c2;
+  --brand-secondary-dim: rgba(57, 215, 194, 0.16);
+  --accent: #9aaaf8;
+  --accent-dim: rgba(154, 170, 248, 0.16);
+
+  --scenario-news-first: #4da3ff;
+  --scenario-resonance: #39d7c2;
+  --scenario-move-first: #fbbf24;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #dbeafe;
+  --text-muted: #a7b3c8;
+  --text-faint: #7c8aa3;
+
+  --radar-brand: var(--brand);
+  --radar-bg: var(--bg-page);
+  --auth-bg:
+    radial-gradient(800px 600px at 75% 20%, rgba(45, 212, 191, 0.1), transparent 60%),
+    radial-gradient(700px 500px at 15% 85%, rgba(129, 140, 248, 0.12), transparent 60%),
+    linear-gradient(150deg, #111827 0%, #132036 55%, #16283d 100%);
+  --auth-card-bg: rgba(15, 23, 42, 0.66);
+  --auth-logo-text: #04211d;
+
   --el-bg-color: var(--bg-panel);
   --el-bg-color-overlay: var(--bg-elevated);
   --el-fill-color: var(--bg-elevated);
@@ -72,9 +147,9 @@ html.dark {
 body {
   margin: 0;
   background:
-    radial-gradient(900px 480px at 82% -12%, rgba(59, 164, 247, 0.13), transparent 62%),
-    radial-gradient(760px 420px at 0% 4%, rgba(45, 212, 191, 0.08), transparent 58%),
-    radial-gradient(620px 420px at 18% 108%, rgba(124, 156, 245, 0.08), transparent 62%),
+    radial-gradient(900px 480px at 82% -12%, var(--brand-dim), transparent 62%),
+    radial-gradient(760px 420px at 0% 4%, var(--brand-secondary-dim), transparent 58%),
+    radial-gradient(620px 420px at 18% 108%, var(--accent-dim), transparent 62%),
     var(--bg-page);
   background-attachment: fixed;
   color: var(--text-primary);
@@ -105,10 +180,12 @@ body {
 .glass-card {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: 12px;
+  border-radius: 22px;
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
   box-shadow:
     inset 0 1px 0 var(--glass-highlight),
-    0 18px 42px rgba(0, 0, 0, 0.28);
+    var(--glass-shadow);
   transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -117,7 +194,7 @@ body {
   background: var(--glass-bg-hover);
   box-shadow:
     inset 0 1px 0 var(--glass-highlight),
-    0 22px 52px rgba(0, 0, 0, 0.42);
+    var(--glass-shadow-hover);
 }
 
 /* ---------- 数字与涨跌 ---------- */
@@ -195,10 +272,7 @@ body {
   padding: 20px;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(800px 600px at 75% 20%, rgba(45, 212, 191, 0.1), transparent 60%),
-    radial-gradient(700px 500px at 15% 85%, rgba(129, 140, 248, 0.12), transparent 60%),
-    linear-gradient(150deg, #0a0f1a 0%, #0d1b2a 55%, #0f2233 100%);
+  background: var(--auth-bg);
 }
 
 .auth-page::before {
@@ -247,7 +321,7 @@ body {
   position: relative;
   z-index: 1;
   width: 430px;
-  background: rgba(15, 23, 42, 0.66);
+  background: var(--auth-card-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
@@ -276,7 +350,7 @@ body {
   height: 48px;
   border-radius: 14px;
   background: linear-gradient(135deg, var(--brand), #0d9488);
-  color: #04211d;
+  color: var(--auth-logo-text);
   font-size: 22px;
   font-weight: 700;
   display: flex;

@@ -16,8 +16,11 @@ import './styles/main.css'
 
 use([CanvasRenderer, LineChart, ScatterChart, GridComponent, TooltipComponent, MarkLineComponent, MarkAreaComponent])
 
-// 全站深色金融终端主题
-document.documentElement.classList.add('dark')
+// 默认使用更明亮的玻璃主题，用户可在右上角切换并持久化。
+const savedTheme = localStorage.getItem('radar-theme')
+const initialTheme = savedTheme === 'dark' ? 'dark' : 'light'
+document.documentElement.dataset.theme = initialTheme
+document.documentElement.classList.toggle('dark', initialTheme === 'dark')
 
 const app = createApp(App)
 app.component('VChart', VChart)

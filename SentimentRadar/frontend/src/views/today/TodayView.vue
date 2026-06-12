@@ -841,7 +841,7 @@ onMounted(() => loadToday())
 
 /* 首页精简视图 */
 .today-home { display: grid; gap: 16px; }
-.home-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 22px; overflow: hidden; background: radial-gradient(circle at 84% 16%, rgba(59, 164, 247, 0.18), transparent 34%), linear-gradient(135deg, rgba(21, 30, 45, 0.96), rgba(16, 24, 38, 0.9)); }
+.home-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 22px; overflow: hidden; background: var(--hero-bg); }
 .eyebrow { color: var(--brand-secondary); font-size: 12px; font-weight: 900; letter-spacing: 0.08em; }
 .home-hero h1 { margin: 8px 0 8px; font-size: 28px; }
 .home-hero p { max-width: 720px; margin: 0; color: var(--text-muted); line-height: 1.7; }

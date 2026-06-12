@@ -17,7 +17,10 @@
 
       <div class="top-actions">
         <button class="top-icon" aria-label="通知">♧</button>
-        <button class="top-icon" aria-label="主题">☼</button>
+        <button class="theme-toggle" :aria-label="themeAriaLabel" @click="toggleTheme">
+          <span class="theme-orb">{{ currentTheme === 'dark' ? '☾' : '☼' }}</span>
+          <span class="theme-text">{{ currentTheme === 'dark' ? '深色' : '浅色' }}</span>
+        </button>
         <el-dropdown trigger="click" @command="handleCommand">
           <span class="user-trigger">
             <el-avatar :size="26" class="avatar">{{ avatarText }}</el-avatar>
@@ -98,8 +101,21 @@ import { useAuthStore } from '../stores/auth'
 const auth = useAuthStore()
 const router = useRouter()
 const sidebarCollapsed = ref(false)
+const currentTheme = ref(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
 
 const avatarText = computed(() => auth.user?.name?.charAt(0) ?? '用')
+const themeAriaLabel = computed(() => (currentTheme.value === 'dark' ? '切换浅色模式' : '切换深色模式'))
+
+function applyTheme(theme: 'light' | 'dark') {
+  currentTheme.value = theme
+  document.documentElement.dataset.theme = theme
+  document.documentElement.classList.toggle('dark', theme === 'dark')
+  localStorage.setItem('radar-theme', theme)
+}
+
+function toggleTheme() {
+  applyTheme(currentTheme.value === 'dark' ? 'light' : 'dark')
+}
 
 async function handleCommand(command: string) {
   if (command === 'settings') {
@@ -119,7 +135,7 @@ async function handleCommand(command: string) {
 
 .topbar {
   height: 56px;
-  background: rgba(10, 15, 26, 0.92);
+  background: var(--nav-glass-bg);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -128,6 +144,8 @@ async function handleCommand(command: string) {
   position: sticky;
   top: 0;
   z-index: 10;
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
 }
 
 .top-left {
@@ -214,9 +232,49 @@ async function handleCommand(command: string) {
   height: 34px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--bg-panel);
+  background: var(--control-bg);
   color: var(--text-secondary);
   cursor: pointer;
+  box-shadow: var(--control-shadow);
+}
+
+.theme-toggle {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--control-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: var(--control-shadow);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.theme-toggle:hover,
+.top-icon:hover {
+  color: var(--text-primary);
+  border-color: rgba(59, 164, 247, 0.38);
+  background: var(--control-bg-hover);
+  transform: translateY(-1px);
+}
+
+.theme-orb {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(224, 242, 254, 0.72));
+  color: #0f172a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 6px 16px rgba(15, 23, 42, 0.12);
+}
+
+.theme-text {
+  font-size: 13px;
+  font-weight: 750;
 }
 
 .user-trigger {
@@ -228,7 +286,8 @@ async function handleCommand(command: string) {
   padding: 5px 10px 5px 6px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--bg-panel);
+  background: var(--control-bg);
+  box-shadow: var(--control-shadow);
 }
 
 .avatar {
@@ -261,7 +320,9 @@ async function handleCommand(command: string) {
   height: calc(100vh - 56px);
   padding: 14px 10px;
   border-right: 1px solid var(--border);
-  background: rgba(10, 15, 26, 0.9);
+  background: var(--nav-glass-bg);
+  backdrop-filter: blur(24px) saturate(1.28);
+  -webkit-backdrop-filter: blur(24px) saturate(1.28);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -432,6 +493,16 @@ async function handleCommand(command: string) {
 
   .user-name {
     display: none;
+  }
+
+  .theme-text {
+    display: none;
+  }
+
+  .theme-toggle {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
   }
 }
 </style>

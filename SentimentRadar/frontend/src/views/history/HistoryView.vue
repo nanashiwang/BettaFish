@@ -364,10 +364,7 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 18px;
   padding: 22px;
-  background:
-    radial-gradient(circle at 92% 8%, rgba(45, 212, 191, 0.18), transparent 32%),
-    radial-gradient(circle at 8% 20%, rgba(59, 164, 247, 0.16), transparent 34%),
-    linear-gradient(135deg, rgba(16, 24, 38, 0.98), rgba(13, 20, 32, 0.92));
+  background: var(--hero-bg);
 }
 
 .eyebrow {

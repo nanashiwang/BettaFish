@@ -97,7 +97,12 @@
             </div>
           </div>
 
-          <div class="glass-card panel focus-panel fade-up fade-up-3">
+          <div
+            id="my-focus"
+            ref="focusPanelRef"
+            class="glass-card panel focus-panel fade-up fade-up-3"
+            :class="{ 'route-highlight': focusPulse }"
+          >
             <div class="panel-head">
               <span>我的关注</span>
               <span class="blue-badge">左侧第二优先级</span>
@@ -255,7 +260,12 @@
           </div>
         </div>
         <aside class="right-home">
-          <div class="glass-card panel">
+          <div
+            id="my-focus"
+            ref="focusPanelRef"
+            class="glass-card panel"
+            :class="{ 'route-highlight': focusPulse }"
+          >
             <div class="panel-head"><span>我的关注</span><button type="button" class="link-btn" @click="showSettings = !showSettings">管理</button></div>
             <div class="panel-body"><MyFocusPanel @go-settings="showSettings = true" /></div>
           </div>
@@ -283,7 +293,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 import { fetchToday } from '../../api/radar'
@@ -303,6 +313,8 @@ const refreshing = ref(false)
 const drawerVisible = ref(false)
 const activeCardId = ref('')
 const showSettings = ref(route.query.tab === 'my')
+const focusPanelRef = ref<HTMLElement | null>(null)
+const focusPulse = ref(false)
 type SignalTab = 'cards' | 'heat' | 'quadrant' | 'evidence'
 const activeSignalTab = ref<SignalTab>('cards')
 const signalTabs: { label: string; value: SignalTab }[] = [
@@ -433,7 +445,36 @@ function formatZ(value?: number | null) {
   return value > 0 ? `+${value}` : `${value}`
 }
 
-onMounted(() => loadToday())
+async function revealMyFocus() {
+  showSettings.value = true
+  focusPulse.value = true
+  await nextTick()
+  focusPanelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  window.setTimeout(() => {
+    focusPulse.value = false
+  }, 900)
+}
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (tab === 'my') revealMyFocus()
+  },
+  { immediate: true },
+)
+
+function handleRevealMyFocus() {
+  revealMyFocus()
+}
+
+onMounted(() => {
+  window.addEventListener('bettafish:reveal-my-focus', handleRevealMyFocus)
+  loadToday()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('bettafish:reveal-my-focus', handleRevealMyFocus)
+})
 </script>
 
 <style scoped>
@@ -551,6 +592,21 @@ onMounted(() => loadToday())
 
 .panel {
   overflow: hidden;
+}
+
+.route-highlight {
+  animation: focus-ring 0.9s ease;
+}
+
+@keyframes focus-ring {
+  0%, 100% {
+    box-shadow: var(--panel-shadow, none);
+  }
+
+  35% {
+    border-color: rgba(59, 164, 247, 0.72);
+    box-shadow: 0 0 0 3px rgba(59, 164, 247, 0.18), 0 18px 54px rgba(59, 164, 247, 0.24);
+  }
 }
 
 .panel-head {

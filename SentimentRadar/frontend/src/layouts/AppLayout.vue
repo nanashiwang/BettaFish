@@ -54,9 +54,14 @@
           <router-link to="/today" class="side-item" active-class="active">
             <span class="side-icon">▣</span><span class="side-text">今日信号</span>
           </router-link>
-          <router-link to="/today?tab=my" class="side-item">
+          <button
+            type="button"
+            class="side-item button-item"
+            :class="{ active: myFocusActive }"
+            @click="goMyFocus"
+          >
             <span class="side-icon">★</span><span class="side-text">我的关注</span>
-          </router-link>
+          </button>
           <router-link to="/history" class="side-item" active-class="active">
             <span class="side-icon">⌁</span><span class="side-text">历史复盘</span>
           </router-link>
@@ -87,16 +92,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, nextTick, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
+const route = useRoute()
 const router = useRouter()
 const sidebarCollapsed = ref(false)
 
 const avatarText = computed(() => auth.user?.name?.charAt(0) ?? '用')
+const myFocusActive = computed(() => route.path === '/today' && route.query.tab === 'my')
+
+async function goMyFocus() {
+  await router.push({ path: '/today', query: { tab: 'my' }, hash: '#my-focus' }).catch(() => undefined)
+  await nextTick()
+  const scrollToFocus = () => document.getElementById('my-focus')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  window.dispatchEvent(new Event('bettafish:reveal-my-focus'))
+  requestAnimationFrame(scrollToFocus)
+  window.setTimeout(() => {
+    window.dispatchEvent(new Event('bettafish:reveal-my-focus'))
+    scrollToFocus()
+  }, 120)
+}
 
 async function handleCommand(command: string) {
   if (command === 'settings') {

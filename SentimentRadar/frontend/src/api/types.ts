@@ -79,6 +79,75 @@ export interface StockCandidate {
   volume_ratio: number
   data_date: string
   reason: string
+  quote_metrics?: StockQuoteMetrics
+  company_profile?: CompanyProfile
+  financial?: FinancialMetrics
+  announcements?: AnnouncementItem[]
+  money_flow?: MoneyFlow
+  board_money_flow?: MoneyFlow
+}
+
+export interface StockQuoteMetrics {
+  code: string
+  trade_date: string
+  close?: number | null
+  pct_chg?: number | null
+  turnover_rate?: number | null
+  volume_ratio?: number | null
+  amount?: number | null
+  pe?: number | null
+  pb?: number | null
+  total_mv?: number | null
+  circ_mv?: number | null
+  source?: string
+}
+
+export interface CompanyProfile {
+  code: string
+  name: string
+  industry?: string
+  area?: string
+  market?: string
+  list_date?: string
+  main_business?: string
+  top_holder?: string
+  controller?: string
+  is_state_owned?: boolean
+  soe_tag?: string
+  source?: string
+}
+
+export interface FinancialMetrics {
+  code: string
+  period?: string
+  ann_date?: string
+  revenue_yoy?: number | null
+  profit_yoy?: number | null
+  gross_margin?: number | null
+  roe?: number | null
+  debt_to_assets?: number | null
+  ocf_to_revenue?: number | null
+  rd_exp?: number | null
+  source?: string
+}
+
+export interface AnnouncementItem {
+  code: string
+  ann_date?: string
+  title: string
+  type: string
+  url?: string
+  source?: string
+}
+
+export interface MoneyFlow {
+  code?: string
+  board_code?: string
+  board_name?: string
+  trade_date?: string
+  net_mf_amount?: number | null
+  net_mf_ratio?: number | null
+  source?: string
 }
 
 export interface ScatterPoint {
@@ -98,6 +167,12 @@ export interface StockScatterPoint {
   return_3d: number | null
   return_5d: number | null
   volume_ratio: number
+  quote_metrics?: StockQuoteMetrics
+  company_profile?: CompanyProfile
+  financial?: FinancialMetrics
+  announcements?: AnnouncementItem[]
+  money_flow?: MoneyFlow
+  board_money_flow?: MoneyFlow
 }
 
 export interface TodayBriefing extends ApiResult {

@@ -32,6 +32,13 @@
           </el-tag>
           <span class="stock-metric num">3日 {{ formatPct(stock.return_3d) }}</span>
           <span class="stock-metric num">量比 {{ stock.volume_ratio }}</span>
+          <div v-if="hasExtra(stock)" class="stock-extra">
+            <span v-if="profileSummary(stock)">{{ profileSummary(stock) }}</span>
+            <span v-if="quoteSummary(stock)">{{ quoteSummary(stock) }}</span>
+            <span v-if="financialSummary(stock)">{{ financialSummary(stock) }}</span>
+            <span v-if="announcementSummary(stock)">{{ announcementSummary(stock) }}</span>
+            <span v-if="flowSummary(stock)">{{ flowSummary(stock) }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -67,9 +74,65 @@ const scenarioClass = computed(() => {
 
 const topStocks = computed(() => (props.card.stock_candidates || []).slice(0, 4))
 
-function formatPct(value: number | null) {
+function formatPct(value?: number | null) {
   if (value == null) return '-'
   return `${value > 0 ? '+' : ''}${value}%`
+}
+
+function formatNumber(value?: number | null, digits = 1) {
+  if (value == null) return '-'
+  return Number(value).toFixed(digits)
+}
+
+function formatFlow(value?: number | null) {
+  if (value == null) return '-'
+  if (Math.abs(value) >= 10000) return `${value > 0 ? '+' : ''}${(value / 10000).toFixed(2)}亿`
+  return `${value > 0 ? '+' : ''}${value.toFixed(0)}万`
+}
+
+function profileSummary(stock: StockCandidate) {
+  const profile = stock.company_profile
+  if (!profile) return ''
+  return [profile.soe_tag, profile.industry || profile.area].filter(Boolean).join(' · ')
+}
+
+function quoteSummary(stock: StockCandidate) {
+  const quote = stock.quote_metrics
+  if (!quote) return ''
+  const parts = []
+  if (quote.turnover_rate != null) parts.push(`换手${formatNumber(quote.turnover_rate)}%`)
+  if (quote.pe != null) parts.push(`PE ${formatNumber(quote.pe)}`)
+  return parts.join(' · ')
+}
+
+function financialSummary(stock: StockCandidate) {
+  const financial = stock.financial
+  if (!financial) return ''
+  return [
+    financial.revenue_yoy != null ? `营收${formatPct(financial.revenue_yoy)}` : '',
+    financial.profit_yoy != null ? `净利${formatPct(financial.profit_yoy)}` : '',
+    financial.roe != null ? `ROE${formatPct(financial.roe)}` : '',
+  ].filter(Boolean).join(' · ')
+}
+
+function announcementSummary(stock: StockCandidate) {
+  const announcement = stock.announcements?.[0]
+  if (!announcement) return ''
+  return `${announcement.type}：${announcement.title}`
+}
+
+function flowSummary(stock: StockCandidate) {
+  const parts = []
+  if (stock.money_flow) parts.push(`个股资金${formatFlow(stock.money_flow.net_mf_amount)}`)
+  if (stock.board_money_flow) parts.push(`板块资金${formatFlow(stock.board_money_flow.net_mf_amount)}`)
+  return parts.join(' · ')
+}
+
+function hasExtra(stock: StockCandidate) {
+  return Boolean(
+    stock.company_profile || stock.quote_metrics || stock.financial || stock.announcements?.length ||
+      stock.money_flow || stock.board_money_flow,
+  )
 }
 
 function stockTagType(label: StockCandidate['label']) {
@@ -226,6 +289,26 @@ h3 {
 .stock-metric {
   color: var(--text-faint);
   font-size: 11px;
+}
+
+.stock-extra {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.stock-extra span {
+  max-width: 100%;
+  padding: 2px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: rgba(42, 54, 72, 0.5);
 }
 
 .tags {

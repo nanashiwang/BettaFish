@@ -161,6 +161,103 @@ _SCHEMAS = [
         paid_at TIMESTAMP
     )
     """,
+    # 个股行情增强快照
+    """
+    CREATE TABLE IF NOT EXISTS radar_stock_quote_metrics (
+        code VARCHAR(32) NOT NULL,
+        trade_date VARCHAR(16) NOT NULL,
+        close DOUBLE PRECISION,
+        pct_chg DOUBLE PRECISION,
+        turnover_rate DOUBLE PRECISION,
+        volume_ratio DOUBLE PRECISION,
+        amount DOUBLE PRECISION,
+        pe DOUBLE PRECISION,
+        pb DOUBLE PRECISION,
+        total_mv DOUBLE PRECISION,
+        circ_mv DOUBLE PRECISION,
+        source VARCHAR(32) NOT NULL DEFAULT '',
+        raw JSONB NOT NULL DEFAULT '{}',
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (code, trade_date)
+    )
+    """,
+    # 个股基础资料与国资属性推断
+    """
+    CREATE TABLE IF NOT EXISTS radar_stock_profiles (
+        code VARCHAR(32) PRIMARY KEY,
+        name VARCHAR(64) NOT NULL DEFAULT '',
+        industry VARCHAR(100) NOT NULL DEFAULT '',
+        area VARCHAR(64) NOT NULL DEFAULT '',
+        market VARCHAR(64) NOT NULL DEFAULT '',
+        list_date VARCHAR(16) NOT NULL DEFAULT '',
+        main_business TEXT NOT NULL DEFAULT '',
+        top_holder VARCHAR(200) NOT NULL DEFAULT '',
+        controller VARCHAR(200) NOT NULL DEFAULT '',
+        is_state_owned BOOLEAN NOT NULL DEFAULT FALSE,
+        soe_tag VARCHAR(32) NOT NULL DEFAULT '',
+        source VARCHAR(32) NOT NULL DEFAULT '',
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+    """,
+    # 财务核心指标快照
+    """
+    CREATE TABLE IF NOT EXISTS radar_stock_financials (
+        code VARCHAR(32) NOT NULL,
+        period VARCHAR(16) NOT NULL,
+        ann_date VARCHAR(16) NOT NULL DEFAULT '',
+        revenue_yoy DOUBLE PRECISION,
+        profit_yoy DOUBLE PRECISION,
+        gross_margin DOUBLE PRECISION,
+        roe DOUBLE PRECISION,
+        debt_to_assets DOUBLE PRECISION,
+        ocf_to_revenue DOUBLE PRECISION,
+        rd_exp DOUBLE PRECISION,
+        source VARCHAR(32) NOT NULL DEFAULT '',
+        raw JSONB NOT NULL DEFAULT '{}',
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (code, period)
+    )
+    """,
+    # 最新公告索引（标题/类型/链接，不存全文）
+    """
+    CREATE TABLE IF NOT EXISTS radar_stock_announcements (
+        code VARCHAR(32) NOT NULL,
+        ann_date VARCHAR(16) NOT NULL,
+        title TEXT NOT NULL,
+        type VARCHAR(32) NOT NULL DEFAULT '其他公告',
+        url TEXT NOT NULL DEFAULT '',
+        source VARCHAR(32) NOT NULL DEFAULT '',
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (code, ann_date, title)
+    )
+    """,
+    # 个股资金流
+    """
+    CREATE TABLE IF NOT EXISTS radar_stock_moneyflow (
+        code VARCHAR(32) NOT NULL,
+        trade_date VARCHAR(16) NOT NULL,
+        net_mf_amount DOUBLE PRECISION,
+        net_mf_ratio DOUBLE PRECISION,
+        source VARCHAR(32) NOT NULL DEFAULT '',
+        raw JSONB NOT NULL DEFAULT '{}',
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (code, trade_date)
+    )
+    """,
+    # 板块资金流（优先真实板块资金流，失败时由候选股资金流聚合）
+    """
+    CREATE TABLE IF NOT EXISTS radar_board_moneyflow (
+        board_code VARCHAR(32) NOT NULL,
+        trade_date VARCHAR(16) NOT NULL,
+        board_name VARCHAR(64) NOT NULL DEFAULT '',
+        net_mf_amount DOUBLE PRECISION,
+        net_mf_ratio DOUBLE PRECISION,
+        source VARCHAR(32) NOT NULL DEFAULT '',
+        raw JSONB NOT NULL DEFAULT '{}',
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (board_code, trade_date)
+    )
+    """,
     # 话题补充价格 z 分（象限散点图使用）
     "ALTER TABLE radar_topics ADD COLUMN IF NOT EXISTS price_z DOUBLE PRECISION",
     # 预判卡补充个股观察池

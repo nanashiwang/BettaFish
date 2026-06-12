@@ -32,7 +32,7 @@
       </el-table>
 
       <h4>个股观察池</h4>
-      <el-table :data="detail.detail.stock_candidates || []" size="small" empty-text="暂无个股候选">
+      <el-table :data="detail.detail.stock_candidates || []" size="small" empty-text="暂无个股候选" :fit="false">
         <el-table-column prop="name" label="股票" width="92">
           <template #default="{ row }">
             <div class="stock-name">{{ row.name }}</div>
@@ -47,6 +47,9 @@
           <template #default="{ row }">{{ row.volume_ratio }}</template>
         </el-table-column>
         <el-table-column prop="reason" label="入池原因" />
+        <el-table-column label="补充证据" width="240" show-overflow-tooltip>
+          <template #default="{ row }">{{ stockEvidence(row) }}</template>
+        </el-table-column>
       </el-table>
 
       <h4>风险边界</h4>
@@ -67,7 +70,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { fetchPredictionDetail } from '../../api/radar'
-import type { PredictionDetail } from '../../api/types'
+import type { PredictionDetail, StockCandidate } from '../../api/types'
 
 const props = defineProps<{ modelValue: boolean; cardId: string }>()
 defineEmits<{ 'update:modelValue': [value: boolean] }>()
@@ -86,9 +89,43 @@ async function load() {
   }
 }
 
-function formatPct(value: number | null) {
+function formatPct(value?: number | null) {
   if (value == null) return '-'
   return `${value > 0 ? '+' : ''}${value}%`
+}
+
+function formatNumber(value?: number | null, digits = 1) {
+  if (value == null) return '-'
+  return Number(value).toFixed(digits)
+}
+
+function formatFlow(value?: number | null) {
+  if (value == null) return '-'
+  if (Math.abs(value) >= 10000) return `${value > 0 ? '+' : ''}${(value / 10000).toFixed(2)}亿`
+  return `${value > 0 ? '+' : ''}${value.toFixed(0)}万`
+}
+
+function stockEvidence(stock: StockCandidate) {
+  const parts = []
+  if (stock.company_profile) {
+    parts.push([stock.company_profile.soe_tag, stock.company_profile.industry].filter(Boolean).join(' · '))
+  }
+  if (stock.quote_metrics?.turnover_rate != null) {
+    parts.push(`换手${formatNumber(stock.quote_metrics.turnover_rate)}%`)
+  }
+  if (stock.financial) {
+    parts.push(`营收${formatPct(stock.financial.revenue_yoy)} / 净利${formatPct(stock.financial.profit_yoy)}`)
+  }
+  if (stock.announcements?.[0]) {
+    parts.push(`${stock.announcements[0].type}：${stock.announcements[0].title}`)
+  }
+  if (stock.money_flow) {
+    parts.push(`个股资金${formatFlow(stock.money_flow.net_mf_amount)}`)
+  }
+  if (stock.board_money_flow) {
+    parts.push(`板块资金${formatFlow(stock.board_money_flow.net_mf_amount)}`)
+  }
+  return parts.filter(Boolean).join('；') || '-'
 }
 </script>
 

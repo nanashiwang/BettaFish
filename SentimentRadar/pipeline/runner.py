@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from SentimentRadar import db
 from SentimentRadar.pipeline import card_generator, config_store, news_collector, signals, topic_extractor
+from SentimentRadar.pipeline.enrichment import StockEnrichmentService
 from SentimentRadar.pipeline.quotes import QuoteService
 
 _run_lock = threading.Lock()
@@ -125,17 +126,36 @@ def run_pipeline(trade_date: Optional[date] = None) -> Dict[str, Any]:
             signals.compute_heat(mapped, news, trade_date)
             signal_list = signals.build_signals(mapped, quotes_by_board)
             stock_candidate_count = 0
+            enrichment_service = StockEnrichmentService(config.get("tushare_token", ""))
+            enrichment_stats = {
+                "quote_metrics": 0,
+                "profiles": 0,
+                "financials": 0,
+                "announcements": 0,
+                "stock_moneyflow": 0,
+                "board_moneyflow": 0,
+            }
             for signal in signal_list[:6]:
                 try:
                     candidates = quote_service.stock_candidates(
                         signal["board"], signal.get("scenario", ""), limit=8
                     )
+                    if candidates:
+                        try:
+                            enriched = enrichment_service.enrich_candidates(
+                                candidates, signal["board"], trade_date
+                            )
+                            for key, value in enriched.items():
+                                enrichment_stats[key] = enrichment_stats.get(key, 0) + value
+                        except Exception as exc:
+                            logger.warning(f"候选股增强数据补齐失败 {signal['board']['name']}: {exc}")
                     signal["stock_candidates"] = candidates
                     stock_candidate_count += len(candidates)
                 except Exception as exc:
                     logger.warning(f"个股观察池筛选失败 {signal['board']['name']}: {exc}")
                     signal["stock_candidates"] = []
             stats["stock_candidates"] = stock_candidate_count
+            stats["stock_enrichment"] = enrichment_stats
             topic_extractor.save_topics(trade_date, mapped)
             stats["signals"] = len(signal_list)
             if not signal_list:

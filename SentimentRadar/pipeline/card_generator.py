@@ -57,6 +57,77 @@ _USER_TEMPLATE = """今日日期：{today}
 注意：evidence_chain 的来源与数量必须基于给到的真实新闻来源统计；timeline 基于真实信息，不要编造具体时刻。"""
 
 
+def _fmt_num(value: Any, suffix: str = "", default: str = "-") -> str:
+    if value is None or value == "":
+        return default
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return default
+    return f"{num:+.2f}{suffix}" if suffix == "%" else f"{num:.2f}{suffix}"
+
+
+def _fmt_amount(value: Any) -> str:
+    if value is None or value == "":
+        return "-"
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    if abs(num) >= 10000:
+        return f"{num / 10000:+.2f}亿"
+    return f"{num:+.0f}万"
+
+
+def _stock_line(item: Dict[str, Any]) -> str:
+    profile = item.get("company_profile") or {}
+    financial = item.get("financial") or {}
+    quote = item.get("quote_metrics") or {}
+    announcements = item.get("announcements") or []
+    money_flow = item.get("money_flow") or {}
+    board_flow = item.get("board_money_flow") or {}
+
+    parts = [
+        f"{item['name']}({item['code']}) {item['label']}",
+        f"3日{_fmt_num(item.get('return_3d'), '%')}",
+        f"量比{_fmt_num(item.get('volume_ratio'))}",
+    ]
+    if quote:
+        parts.append(
+            f"换手{_fmt_num(quote.get('turnover_rate'), '%')} PE{_fmt_num(quote.get('pe'))}"
+        )
+    if profile:
+        parts.append(
+            f"{profile.get('soe_tag') or '股权待核验'} {profile.get('industry') or ''}".strip()
+        )
+    if financial:
+        parts.append(
+            f"营收{_fmt_num(financial.get('revenue_yoy'), '%')} 净利{_fmt_num(financial.get('profit_yoy'), '%')} ROE{_fmt_num(financial.get('roe'), '%')}"
+        )
+    if announcements:
+        latest = announcements[0]
+        parts.append(f"公告[{latest.get('type')}] {str(latest.get('title') or '')[:28]}")
+    if money_flow:
+        parts.append(
+            f"个股资金{_fmt_amount(money_flow.get('net_mf_amount'))} 占比{_fmt_num(money_flow.get('net_mf_ratio'), '%')}"
+        )
+    if board_flow:
+        parts.append(f"板块资金{_fmt_amount(board_flow.get('net_mf_amount'))}")
+    return " / ".join(part for part in parts if part and part != "-")
+
+
+def _stock_evidence_summary(stocks: List[Dict[str, Any]]) -> str:
+    if not stocks:
+        return "个股证据 0 项"
+    return (
+        f"行情增强 {sum(1 for s in stocks if s.get('quote_metrics'))} / "
+        f"基础资料 {sum(1 for s in stocks if s.get('company_profile'))} / "
+        f"财务 {sum(1 for s in stocks if s.get('financial'))} / "
+        f"公告 {sum(len(s.get('announcements') or []) for s in stocks)} / "
+        f"资金流 {sum(1 for s in stocks if s.get('money_flow'))}"
+    )
+
+
 def _signal_text(index: int, signal: Dict[str, Any], news: List[Dict[str, Any]]) -> str:
     topic = signal["topic"]
     board = signal["board"]
@@ -73,16 +144,14 @@ def _signal_text(index: int, signal: Dict[str, Any], news: List[Dict[str, Any]])
     sources = "、".join(f"{name}{count}条" for name, count in source_counts.items())
     stock_text = "暂无"
     if stocks:
-        stock_text = "；".join(
-            f"{item['name']}({item['code']}) {item['label']} 3日{item['return_3d']}% 量比{item['volume_ratio']}"
-            for item in stocks[:6]
-        )
+        stock_text = "；".join(_stock_line(item) for item in stocks[:6])
     return (
         f"信号 {index}：{topic['name']}（场景：{signal['scenario']}，强度：{signal['strength']}）\n"
         f"- 舆情：热度分 {topic['heat_score']}（z={topic['heat_z']}），覆盖来源：{sources}\n"
         f"- 板块：{board['name']}（{board['type']}），近 3 日涨幅 {metrics['return_3d']}%"
         f"（z={metrics['price_z']}），量比 {metrics['volume_ratio']}\n"
         f"- 个股观察池：{stock_text}\n"
+        f"- 个股证据覆盖：{_stock_evidence_summary(stocks)}\n"
         f"- 关联热榜：\n" + "\n".join(titles)
     )
 
@@ -122,7 +191,10 @@ def generate_cards(
             "risk": str(card.get("risk") or ""),
             "next_watch": str(card.get("next") or ""),
             "tags": (card.get("tags") or [topic["name"], signal["scenario"]])[:4],
-            "evidence_summary": f"热榜 {news_count} 条 / 热度z {topic['heat_z']} / 价格z {signal['metrics']['price_z']}",
+            "evidence_summary": (
+                f"热榜 {news_count} 条 / 热度z {topic['heat_z']} / "
+                f"价格z {signal['metrics']['price_z']} / {_stock_evidence_summary(signal.get('stock_candidates', []))}"
+            ),
             "detail": detail,
             "boards": signal["all_boards"],
             "stock_candidates": signal.get("stock_candidates", []),

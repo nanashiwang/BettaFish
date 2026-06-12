@@ -47,6 +47,21 @@
                   <el-tag size="small" effect="plain" :type="tagType(row.label)">{{ row.label }}</el-tag>
                 </template>
               </el-table-column>
+              <el-table-column label="企业属性" min-width="150" show-overflow-tooltip>
+                <template #default="{ row }">{{ profileSummary(row) }}</template>
+              </el-table-column>
+              <el-table-column label="行情增强" min-width="170" show-overflow-tooltip>
+                <template #default="{ row }">{{ quoteSummary(row) }}</template>
+              </el-table-column>
+              <el-table-column label="财务摘要" min-width="210" show-overflow-tooltip>
+                <template #default="{ row }">{{ financialSummary(row) }}</template>
+              </el-table-column>
+              <el-table-column label="最新公告" min-width="240" show-overflow-tooltip>
+                <template #default="{ row }">{{ announcementSummary(row) }}</template>
+              </el-table-column>
+              <el-table-column label="资金流" min-width="180" show-overflow-tooltip>
+                <template #default="{ row }">{{ flowSummary(row) }}</template>
+              </el-table-column>
               <el-table-column prop="heat_z" label="热度 z" min-width="95" sortable />
               <el-table-column prop="return_3d" label="3日涨幅" min-width="100" sortable>
                 <template #default="{ row }">{{ formatPct(row.return_3d) }}</template>
@@ -94,6 +109,12 @@ const stockScatterPoints = computed<StockScatterPoint[]>(() => {
         return_3d: stock.return_3d,
         return_5d: stock.return_5d,
         volume_ratio: stock.volume_ratio,
+        quote_metrics: stock.quote_metrics,
+        company_profile: stock.company_profile,
+        financial: stock.financial,
+        announcements: stock.announcements,
+        money_flow: stock.money_flow,
+        board_money_flow: stock.board_money_flow,
       })
     }
   }
@@ -119,9 +140,61 @@ async function loadToday() {
   }
 }
 
-function formatPct(value: number | null) {
+function formatPct(value?: number | null) {
   if (value == null) return '-'
   return `${value > 0 ? '+' : ''}${value}%`
+}
+
+function formatNumber(value?: number | null, digits = 1) {
+  if (value == null) return '-'
+  return Number(value).toFixed(digits)
+}
+
+function formatFlow(value?: number | null) {
+  if (value == null) return '-'
+  if (Math.abs(value) >= 10000) return `${value > 0 ? '+' : ''}${(value / 10000).toFixed(2)}亿`
+  return `${value > 0 ? '+' : ''}${value.toFixed(0)}万`
+}
+
+function profileSummary(row: StockScatterPoint) {
+  const profile = row.company_profile
+  if (!profile) return '-'
+  return [profile.soe_tag, profile.industry || profile.area, profile.top_holder].filter(Boolean).join(' · ') || '-'
+}
+
+function quoteSummary(row: StockScatterPoint) {
+  const quote = row.quote_metrics
+  if (!quote) return '-'
+  return [
+    quote.pct_chg != null ? `当日${formatPct(quote.pct_chg)}` : '',
+    quote.turnover_rate != null ? `换手${formatNumber(quote.turnover_rate)}%` : '',
+    quote.pe != null ? `PE ${formatNumber(quote.pe)}` : '',
+    quote.pb != null ? `PB ${formatNumber(quote.pb)}` : '',
+  ].filter(Boolean).join(' · ') || '-'
+}
+
+function financialSummary(row: StockScatterPoint) {
+  const financial = row.financial
+  if (!financial) return '-'
+  return [
+    financial.revenue_yoy != null ? `营收${formatPct(financial.revenue_yoy)}` : '',
+    financial.profit_yoy != null ? `净利${formatPct(financial.profit_yoy)}` : '',
+    financial.roe != null ? `ROE${formatPct(financial.roe)}` : '',
+    financial.gross_margin != null ? `毛利${formatPct(financial.gross_margin)}` : '',
+  ].filter(Boolean).join(' · ') || '-'
+}
+
+function announcementSummary(row: StockScatterPoint) {
+  const announcement = row.announcements?.[0]
+  if (!announcement) return '-'
+  return `${announcement.type}：${announcement.title}`
+}
+
+function flowSummary(row: StockScatterPoint) {
+  const parts = []
+  if (row.money_flow) parts.push(`个股${formatFlow(row.money_flow.net_mf_amount)}`)
+  if (row.board_money_flow) parts.push(`板块${formatFlow(row.board_money_flow.net_mf_amount)}`)
+  return parts.join(' · ') || '-'
 }
 
 function tagType(label: string) {

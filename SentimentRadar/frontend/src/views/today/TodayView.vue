@@ -71,15 +71,6 @@
                 </button>
               </div>
 
-              <div v-else-if="activeSignalTab === 'quadrant'" class="quadrant-workbench">
-                <QuadrantChart :points="stockScatterPoints" />
-                <div class="quadrant-stat-grid">
-                  <div v-for="stat in quadrantStats" :key="stat.label" class="quadrant-stat">
-                    <span>{{ stat.label }}</span><b class="num">{{ stat.value }}</b><small>{{ stat.text }}</small>
-                  </div>
-                </div>
-              </div>
-
               <div v-else class="evidence-workbench">
                 <div class="evidence-summary">
                   <div v-for="item in today.evidence_overview" :key="item.name" class="evidence-tile">
@@ -97,27 +88,6 @@
             </div>
           </div>
 
-          <div
-            id="my-focus"
-            ref="focusPanelRef"
-            class="glass-card panel focus-panel fade-up fade-up-3"
-            :class="{ 'route-highlight': focusPulse }"
-          >
-            <div class="panel-head">
-              <span>我的关注</span>
-              <span class="blue-badge">左侧第二优先级</span>
-            </div>
-            <div class="panel-body">
-              <MyFocusPanel @go-settings="showSettings = true" />
-            </div>
-          </div>
-
-          <details class="glass-card panel settings-fold fade-up fade-up-4" :open="showSettings">
-            <summary @click.prevent="showSettings = !showSettings">关注管理 / 推送提醒</summary>
-            <div class="panel-body">
-              <SettingsPanel />
-            </div>
-          </details>
         </div>
 
         <aside class="right-stack">
@@ -204,17 +174,11 @@
             </div>
           </div>
 
-          <div class="glass-card side-panel chart-panel fade-up fade-up-4">
-            <div class="panel-head"><span>个股候选象限图</span></div>
-            <QuadrantChart :points="stockScatterPoints" />
-            <p class="faint quadrant-hint">左上优先看「补涨观察」：主题热度高、个股 3 日涨幅仍低。</p>
-          </div>
-
           <div class="glass-card side-panel plan-note fade-up fade-up-4">
             <div class="panel-head"><span>规划说明</span></div>
             <p>
-              左侧承载用户每天必看的内容：今日信号、我的关注、历史复盘；右侧承载风险、
-              证据、管线和系统态。这样可以减少入口，让 Radar 像一个完整产品。
+              左侧工作台拆分为今日信号、我的关注、候选股票象限和历史复盘；
+              今日页聚焦主线信号，右侧承载风险、证据、管线和系统态。
             </p>
           </div>
         </aside>
@@ -247,8 +211,8 @@
 
     <template v-else-if="today && today.cards.length">
       <section class="quick-grid fade-up fade-up-1">
-        <div class="quick-card glass-card"><span>今日强信号</span><b class="num">{{ today.cards.length }}</b><small>{{ stockScatterPoints.length }} 只候选股待观察</small></div>
-        <div class="quick-card glass-card"><span>我的关注命中</span><b class="num">{{ today.my_related.items[0]?.value || today.my_related.highlight || '0' }}</b><small>{{ today.my_related.summary || '股票 · 主题 · 板块' }}</small></div>
+        <div class="quick-card glass-card"><span>今日强信号</span><b class="num">{{ today.cards.length }}</b><small>点击预判卡查看证据链</small></div>
+        <div class="quick-card glass-card"><span>候选股票池</span><b class="num">{{ stockScatterPoints.length }}</b><small>左侧「候选股票象限」查看</small></div>
         <div class="quick-card glass-card"><span>证据样本</span><b class="num">{{ evidenceTotal.toLocaleString() }}</b><small>新闻 / 公告 / 社媒 / 行情</small></div>
       </section>
 
@@ -259,28 +223,6 @@
             <div class="panel-body card-grid"><PredictionCard v-for="card in topCards" :key="card.id" :card="card" @view-evidence="openDrawer" /></div>
           </div>
         </div>
-        <aside class="right-home">
-          <div
-            id="my-focus"
-            ref="focusPanelRef"
-            class="glass-card panel"
-            :class="{ 'route-highlight': focusPulse }"
-          >
-            <div class="panel-head"><span>我的关注</span><button type="button" class="link-btn" @click="showSettings = !showSettings">管理</button></div>
-            <div class="panel-body"><MyFocusPanel @go-settings="showSettings = true" /></div>
-          </div>
-          <div class="glass-card panel stock-quadrant-card">
-            <div class="panel-head"><span>个股候选象限</span><small>主题热度 × 个股涨幅</small></div>
-            <div class="panel-body">
-              <QuadrantChart :points="stockScatterPoints" />
-              <p class="quadrant-hint">左上优先看「补涨观察」：主题热度高、个股 3 日涨幅仍低。</p>
-            </div>
-          </div>
-          <details class="glass-card panel settings-fold" :open="showSettings">
-            <summary @click.prevent="showSettings = !showSettings">关注管理 / 推送提醒</summary>
-            <div class="panel-body"><SettingsPanel /></div>
-          </details>
-        </aside>
       </section>
     </template>
 
@@ -293,7 +235,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 import { fetchToday } from '../../api/radar'
@@ -301,9 +243,6 @@ import type { StockScatterPoint, TodayBriefing } from '../../api/types'
 import { useAuthStore } from '../../stores/auth'
 import PredictionCard from '../../components/today/PredictionCard.vue'
 import EvidenceDrawer from '../../components/today/EvidenceDrawer.vue'
-import MyFocusPanel from '../../components/today/MyFocusPanel.vue'
-import SettingsPanel from '../../components/today/SettingsPanel.vue'
-import QuadrantChart from '../../components/charts/QuadrantChart.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -312,15 +251,11 @@ const todayLoading = ref(true)
 const refreshing = ref(false)
 const drawerVisible = ref(false)
 const activeCardId = ref('')
-const showSettings = ref(route.query.tab === 'my')
-const focusPanelRef = ref<HTMLElement | null>(null)
-const focusPulse = ref(false)
-type SignalTab = 'cards' | 'heat' | 'quadrant' | 'evidence'
+type SignalTab = 'cards' | 'heat' | 'evidence'
 const activeSignalTab = ref<SignalTab>('cards')
 const signalTabs: { label: string; value: SignalTab }[] = [
   { label: '预判卡', value: 'cards' },
   { label: '热度排序', value: 'heat' },
-  { label: '个股象限', value: 'quadrant' },
   { label: '证据链', value: 'evidence' },
 ]
 const isConsole = computed(() => route.name === 'console')
@@ -352,19 +287,9 @@ const activeSignalMeta = computed(() => {
   const meta: Record<SignalTab, { title: string; description: string; badge: string }> = {
     cards: { title: `舆情-价格背离 Top${total}`, description: today.value?.headline || '今日强信号预判卡', badge: '主视窗' },
     heat: { title: '热度排序', description: '按舆情热度 z 分倒序排列，点击行可展开证据链。', badge: '可点击' },
-    quadrant: { title: '个股候选象限', description: '横轴个股 3 日涨幅、纵轴主题热度，优先关注热度高但涨幅低的补涨观察。', badge: '候选股' },
     evidence: { title: '证据链', description: '按信号聚合新闻、公告、社媒与行情证据，点击查看详情。', badge: '来源追踪' },
   }
   return meta[activeSignalTab.value]
-})
-
-const quadrantStats = computed(() => {
-  const points = stockScatterPoints.value
-  return [
-    { label: '补涨观察', value: points.filter((p) => p.label === '补涨观察').length, text: '热度高涨幅低' },
-    { label: '先动股', value: points.filter((p) => p.label === '先动股').length, text: '价格已启动' },
-    { label: '风险股', value: points.filter((p) => p.label === '高位风险' || p.label === '弱势回避').length, text: '兑现或回避' },
-  ]
 })
 
 const stockScatterPoints = computed<StockScatterPoint[]>(() => {
@@ -445,36 +370,7 @@ function formatZ(value?: number | null) {
   return value > 0 ? `+${value}` : `${value}`
 }
 
-async function revealMyFocus() {
-  showSettings.value = true
-  focusPulse.value = true
-  await nextTick()
-  focusPanelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  window.setTimeout(() => {
-    focusPulse.value = false
-  }, 900)
-}
-
-watch(
-  () => route.query.tab,
-  (tab) => {
-    if (tab === 'my') revealMyFocus()
-  },
-  { immediate: true },
-)
-
-function handleRevealMyFocus() {
-  revealMyFocus()
-}
-
-onMounted(() => {
-  window.addEventListener('bettafish:reveal-my-focus', handleRevealMyFocus)
-  loadToday()
-})
-
-onUnmounted(() => {
-  window.removeEventListener('bettafish:reveal-my-focus', handleRevealMyFocus)
-})
+onMounted(() => loadToday())
 </script>
 
 <style scoped>
@@ -594,21 +490,6 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.route-highlight {
-  animation: focus-ring 0.9s ease;
-}
-
-@keyframes focus-ring {
-  0%, 100% {
-    box-shadow: var(--panel-shadow, none);
-  }
-
-  35% {
-    border-color: rgba(59, 164, 247, 0.72);
-    box-shadow: 0 0 0 3px rgba(59, 164, 247, 0.18), 0 18px 54px rgba(59, 164, 247, 0.24);
-  }
-}
-
 .panel-head {
   min-height: 42px;
   display: flex;
@@ -713,40 +594,13 @@ onUnmounted(() => {
 .heat-score small { margin-top: 4px; color: var(--text-faint); font-size: 12px; }
 .heat-score { padding: 8px 10px; border-radius: 10px; background: rgba(59, 164, 247, 0.08); text-align: right; }
 .heat-score b { color: var(--text-primary); font-size: 18px; }
-.quadrant-workbench { display: grid; gap: 14px; }
-.quadrant-workbench :deep(.quadrant-chart) { height: 360px; }
-.quadrant-stat-grid,
 .evidence-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.quadrant-stat,
 .evidence-tile { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel); }
-.quadrant-stat span,
-.evidence-tile span,
-.quadrant-stat small { display: block; color: var(--text-muted); font-size: 12px; }
-.quadrant-stat b,
+.evidence-tile span { display: block; color: var(--text-muted); font-size: 12px; }
 .evidence-tile b { display: block; margin: 5px 0 2px; color: var(--text-primary); font-size: 24px; }
 .evidence-workbench { display: grid; gap: 14px; }
 .evidence-card-row { grid-template-columns: 56px minmax(0, 1fr) auto; }
 .evidence-pill { justify-self: end; padding: 5px 9px; border: 1px solid rgba(45, 212, 191, 0.24); border-radius: 999px; color: var(--brand-secondary); background: rgba(45, 212, 191, 0.1); font-size: 12px; white-space: nowrap; }
-
-.focus-panel :deep(.head-line) {
-  display: none;
-}
-
-.focus-panel :deep(.el-empty) {
-  --el-empty-padding: 34px 0;
-}
-
-.focus-panel :deep(.el-empty__image) {
-  width: 110px;
-}
-
-.settings-fold summary {
-  cursor: pointer;
-  min-height: 42px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  font-weight: 800;
-}
 
 .side-panel {
   overflow: hidden;
@@ -936,25 +790,6 @@ onUnmounted(() => {
   background: linear-gradient(90deg, var(--brand), var(--brand-secondary));
 }
 
-.chart-panel :deep(.quadrant-chart) {
-  height: 260px;
-}
-
-.stock-quadrant-card :deep(.quadrant-chart) {
-  height: 280px;
-}
-
-.stock-quadrant-card .quadrant-hint {
-  margin: 10px 0 0;
-  color: var(--text-faint);
-  line-height: 1.6;
-}
-
-.quadrant-hint {
-  margin: -6px 16px 16px;
-  font-size: 12px;
-}
-
 .plan-note {
   border-color: rgba(251, 191, 36, 0.35);
   background:
@@ -991,7 +826,6 @@ onUnmounted(() => {
 
   .metric-grid,
   .prediction-grid,
-  .quadrant-stat-grid,
   .evidence-summary {
     grid-template-columns: 1fr;
   }
@@ -1015,11 +849,9 @@ onUnmounted(() => {
 .quick-card { min-height: 116px; padding: 18px; background: var(--bg-elevated); }
 .quick-card span, .quick-card small { display: block; color: var(--text-muted); font-size: 13px; }
 .quick-card b { display: block; margin: 8px 0 4px; color: var(--text-primary); font-size: 32px; }
-.home-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr); gap: 16px; align-items: start; }
-.left-home, .right-home { display: grid; gap: 16px; }
+.home-grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+.left-home { display: grid; gap: 16px; }
 .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.link-btn { border: 0; background: transparent; color: var(--brand); cursor: pointer; font: inherit; font-size: 13px; font-weight: 800; }
-.right-home :deep(.head-line) { display: none; }
 @media (max-width: 1080px) { .home-grid, .quick-grid, .card-grid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .home-hero { align-items: flex-start; flex-direction: column; } .hero-actions { width: 100%; justify-content: space-between; } }
 

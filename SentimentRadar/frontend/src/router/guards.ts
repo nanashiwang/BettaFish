@@ -7,6 +7,11 @@ export function setupGuards(router: Router) {
     const auth = useAuthStore()
     await auth.ensureLoaded()
 
+    // 兼容旧入口：我的关注已经独立成页面。
+    if (to.name === 'today' && to.query.tab === 'my') {
+      return { path: '/focus' }
+    }
+
     // 已登录访问公开页（首页/登录/注册）：跳回 redirect 或今日预判
     if (to.meta.public) {
       if (auth.isLoggedIn) {

@@ -33,6 +33,16 @@ const router = createRouter({
           component: () => import('../views/today/TodayView.vue'),
         },
         {
+          path: 'focus',
+          name: 'focus',
+          component: () => import('../views/focus/FocusView.vue'),
+        },
+        {
+          path: 'candidates',
+          name: 'candidates',
+          component: () => import('../views/candidates/CandidatesView.vue'),
+        },
+        {
           path: 'history',
           name: 'history',
           component: () => import('../views/history/HistoryView.vue'),

@@ -51,17 +51,15 @@
 
         <div class="side-group">
           <div class="side-label">工作台</div>
-          <router-link to="/today" class="side-item" :class="{ active: todaySignalActive }">
+          <router-link to="/today" class="side-item" active-class="active">
             <span class="side-icon">▣</span><span class="side-text">今日信号</span>
           </router-link>
-          <button
-            type="button"
-            class="side-item button-item"
-            :class="{ active: myFocusActive }"
-            @click="goMyFocus"
-          >
+          <router-link to="/focus" class="side-item" active-class="active">
             <span class="side-icon">★</span><span class="side-text">我的关注</span>
-          </button>
+          </router-link>
+          <router-link to="/candidates" class="side-item" active-class="active">
+            <span class="side-icon">◎</span><span class="side-text">候选股票象限</span>
+          </router-link>
           <router-link to="/history" class="side-item" active-class="active">
             <span class="side-icon">⌁</span><span class="side-text">历史复盘</span>
           </router-link>
@@ -92,31 +90,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
-const route = useRoute()
 const router = useRouter()
 const sidebarCollapsed = ref(false)
 
 const avatarText = computed(() => auth.user?.name?.charAt(0) ?? '用')
-const todaySignalActive = computed(() => route.path === '/today' && route.query.tab !== 'my')
-const myFocusActive = computed(() => route.path === '/today' && route.query.tab === 'my')
-
-async function goMyFocus() {
-  await router.push({ path: '/today', query: { tab: 'my' }, hash: '#my-focus' }).catch(() => undefined)
-  await nextTick()
-  const scrollToFocus = () => document.getElementById('my-focus')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  window.dispatchEvent(new Event('bettafish:reveal-my-focus'))
-  requestAnimationFrame(scrollToFocus)
-  window.setTimeout(() => {
-    window.dispatchEvent(new Event('bettafish:reveal-my-focus'))
-    scrollToFocus()
-  }, 120)
-}
 
 async function handleCommand(command: string) {
   if (command === 'settings') {
@@ -365,12 +348,6 @@ async function handleCommand(command: string) {
   border-color: rgba(59, 164, 247, 0.45);
   background: rgba(59, 164, 247, 0.12);
   box-shadow: inset 3px 0 0 var(--brand);
-}
-
-.button-item {
-  cursor: pointer;
-  font-family: inherit;
-  background: transparent;
 }
 
 .sidebar.collapsed .rail-title,

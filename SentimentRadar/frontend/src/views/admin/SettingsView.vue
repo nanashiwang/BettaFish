@@ -71,10 +71,10 @@
             <small>{{ item.action }}</small>
           </div>
         </div>
-        <el-collapse v-model="systemActiveGroups">
+        <el-collapse v-model="systemActiveGroups" class="system-sections">
           <el-collapse-item v-for="group in systemConfigGroups" :key="group.title" :name="group.title">
             <template #title>
-              <div>
+              <div class="collapse-title">
                 <b>{{ group.title }}</b>
                 <span class="muted group-subtitle">{{ group.subtitle }}</span>
               </div>
@@ -754,15 +754,19 @@ async function handleSave() {
   background:
     radial-gradient(circle at 8% 0%, var(--brand-dim), transparent 32%),
     var(--bg-elevated);
+  box-shadow: var(--glass-shadow);
   backdrop-filter: blur(18px);
 }
 
 .module-tabs button {
+  position: relative;
   min-height: 64px;
   padding: 10px 12px;
-  border: 1px solid transparent;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   border-radius: 12px;
   background: var(--control-bg);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
   color: var(--text-secondary);
   cursor: pointer;
   font: inherit;
@@ -775,6 +779,14 @@ async function handleSave() {
   color: var(--text-primary);
   border-color: rgba(59, 164, 247, 0.48);
   background: linear-gradient(135deg, rgba(59, 164, 247, 0.18), rgba(45, 212, 191, 0.08));
+}
+
+.module-tabs button.active::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--brand), var(--brand-secondary));
 }
 
 .module-tabs strong,
@@ -828,7 +840,7 @@ async function handleSave() {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .health-row {
@@ -837,9 +849,12 @@ async function handleSave() {
   gap: 10px;
   align-items: center;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--brand) 14%, var(--border));
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background:
+    radial-gradient(circle at 90% 8%, color-mix(in srgb, var(--brand) 10%, transparent), transparent 38%),
+    var(--bg-elevated);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
 }
 
 .health-row strong,
@@ -903,6 +918,50 @@ async function handleSave() {
   font-weight: 400;
 }
 
+.system-sections {
+  display: grid;
+  gap: 14px;
+  border: 0;
+}
+
+.system-sections :deep(.el-collapse-item) {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--brand) 12%, var(--border));
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 96% 0%, color-mix(in srgb, var(--brand) 8%, transparent), transparent 34%),
+    var(--bg-elevated);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.system-sections :deep(.el-collapse-item__header) {
+  min-height: 58px;
+  height: auto;
+  padding: 0 16px;
+  border-bottom: 0;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--brand) 9%, transparent), transparent 52%),
+    var(--bg-elevated);
+}
+
+.system-sections :deep(.el-collapse-item__wrap) {
+  border-bottom: 0;
+  background: transparent;
+}
+
+.system-sections :deep(.el-collapse-item__content) {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.collapse-title b {
+  font-size: 14px;
+}
+
+.collapse-title .group-subtitle {
+  display: inline-block;
+}
+
 .config-note {
   margin: 12px 0 0;
   font-size: 13px;
@@ -940,13 +999,24 @@ async function handleSave() {
   margin-bottom: 16px;
 }
 
+.panel :deep(.el-card__header) {
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--brand) 7%, transparent), transparent 54%),
+    transparent;
+}
+
+.panel :deep(.el-card__body) {
+  padding: 20px;
+}
+
 .rule-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 9px 0;
   font-size: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border);
 }
 
 .rule-row:last-child {

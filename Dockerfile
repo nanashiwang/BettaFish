@@ -57,7 +57,8 @@ WORKDIR /app
 
 # Install Python dependencies first to leverage Docker layer caching
 COPY requirements.txt ./
-RUN uv pip install --system -r requirements.txt
+# Keep Docker builds on CPU-only PyTorch; otherwise PyPI may pull large CUDA wheels.
+RUN uv pip install --system --torch-backend=cpu -r requirements.txt
 
 # Install Playwright browser binaries (system deps already handled above)
 RUN python -m playwright install chromium

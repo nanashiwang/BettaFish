@@ -1,7 +1,7 @@
 <template>
   <el-drawer
     :model-value="modelValue"
-    size="480px"
+    size="620px"
     :title="detail?.detail.title || '证据链解析'"
     @update:model-value="$emit('update:modelValue', $event)"
     @open="load"
@@ -10,6 +10,41 @@
     <template v-else-if="detail">
       <el-tag size="small" type="warning">{{ detail.detail.scenario }}</el-tag>
       <p class="summary">{{ detail.detail.summary }}</p>
+
+      <section class="causal-panel">
+        <div class="causal-title">
+          <span>为什么动</span>
+          <el-tag size="small" effect="plain">{{ detail.detail.confidence || '证据不足' }}</el-tag>
+        </div>
+        <p>{{ detail.detail.causal_summary || '当前缺少可追溯来源，暂不做明确归因。' }}</p>
+      </section>
+
+      <h4>驱动链路</h4>
+      <div class="causal-chain">
+        <div v-for="(item, index) in detail.detail.causal_chain || []" :key="`${item.step}-${index}`" class="chain-step">
+          <span class="step-index">{{ index + 1 }}</span>
+          <div>
+            <strong>{{ item.step }}</strong>
+            <p>{{ item.text }}</p>
+          </div>
+        </div>
+      </div>
+
+      <h4>真实来源依据</h4>
+      <el-table :data="detail.detail.evidence_basis || []" size="small" empty-text="暂无可追溯来源">
+        <el-table-column prop="source" label="来源" width="90" />
+        <el-table-column prop="type" label="类型" width="90" />
+        <el-table-column prop="credibility" label="可信度" width="78" />
+        <el-table-column label="标题与采用原因" min-width="260">
+          <template #default="{ row }">
+            <el-link v-if="row.url" :href="row.url" target="_blank" type="primary">
+              {{ row.title }}
+            </el-link>
+            <span v-else>{{ row.title }}</span>
+            <div class="source-note">{{ row.note }}</div>
+          </template>
+        </el-table-column>
+      </el-table>
 
       <h4>为什么这样判断</h4>
       <ul class="plain-list">
@@ -30,6 +65,11 @@
         <el-table-column prop="credibility" label="可信度" width="80" />
         <el-table-column prop="note" label="备注" />
       </el-table>
+
+      <h4>反证提醒</h4>
+      <ul class="plain-list warning-list">
+        <li v-for="(item, index) in detail.detail.counter_evidence || []" :key="index">{{ item }}</li>
+      </ul>
 
       <h4>个股观察池</h4>
       <el-table :data="detail.detail.stock_candidates || []" size="small" empty-text="暂无个股候选" :fit="false">
@@ -140,6 +180,81 @@ function stockEvidence(stock: StockCandidate) {
   color: var(--text-secondary);
 }
 
+.causal-panel {
+  margin: 12px 0 16px;
+  padding: 14px;
+  border: 1px solid rgba(20, 126, 245, 0.22);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 92% 10%, rgba(20, 126, 245, 0.12), transparent 42%),
+    var(--bg-panel);
+}
+
+.causal-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--brand);
+  font-weight: 900;
+}
+
+.causal-panel p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.causal-chain {
+  display: grid;
+  gap: 10px;
+}
+
+.chain-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-panel);
+}
+
+.step-index {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--brand-dim);
+  color: var(--brand);
+  font-weight: 900;
+}
+
+.chain-step strong,
+.chain-step p {
+  display: block;
+}
+
+.chain-step strong {
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+
+.chain-step p,
+.source-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.source-note {
+  margin-top: 4px;
+}
+
 h4 {
   margin: 18px 0 8px;
   font-size: 14px;
@@ -152,6 +267,10 @@ h4 {
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.8;
+}
+
+.warning-list {
+  color: var(--risk);
 }
 
 .timeline {

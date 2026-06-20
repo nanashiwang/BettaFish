@@ -11,6 +11,17 @@
       <div class="row"><span class="label">风险</span>{{ card.risk }}</div>
       <div class="row"><span class="label">关注</span>{{ card.next }}</div>
     </div>
+    <div v-if="causalSummary" class="causal-box">
+      <div class="causal-head">
+        <span>为什么动</span>
+        <el-tag size="small" effect="plain">{{ causalConfidence }}</el-tag>
+      </div>
+      <p>{{ causalSummary }}</p>
+      <div class="causal-meta">
+        <span v-if="card.causal?.lead_source">主来源：{{ card.causal.lead_source }}</span>
+        <span>证据 {{ card.causal?.evidence_count || 0 }} 条</span>
+      </div>
+    </div>
     <div class="metrics" v-if="card.heat_z != null">
       <span class="metric">热度 z <b class="num">{{ card.heat_z }}</b></span>
       <span class="metric">价格 z <b class="num">{{ card.price_z }}</b></span>
@@ -53,7 +64,7 @@
     </div>
     <div class="card-foot">
       <span class="faint">{{ card.evidence }}</span>
-      <el-button type="primary" link @click="$emit('view-evidence', card.id)">证据链 →</el-button>
+      <el-button type="primary" link @click="$emit('view-evidence', card.id)">证据与归因 →</el-button>
     </div>
   </article>
 </template>
@@ -73,6 +84,8 @@ const scenarioClass = computed(() => {
 })
 
 const topStocks = computed(() => (props.card.stock_candidates || []).slice(0, 4))
+const causalSummary = computed(() => props.card.causal?.summary || '')
+const causalConfidence = computed(() => props.card.causal?.confidence || '证据不足')
 
 function formatPct(value?: number | null) {
   if (value == null) return '-'
@@ -228,6 +241,43 @@ h3 {
   margin-bottom: 12px;
   font-size: 12px;
   color: var(--text-faint);
+}
+
+.causal-box {
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--scenario-color) 28%, var(--border));
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--scenario-color) 10%, transparent), transparent 42%),
+    var(--bg-panel);
+}
+
+.causal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--scenario-color);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.causal-box p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.causal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--text-faint);
+  font-size: 11px;
 }
 
 .metric b {

@@ -57,6 +57,33 @@ def _board_trend(board_code: Optional[str], days: int = 30) -> List[float]:
     return [row.close for row in reversed(rows) if row.close is not None]
 
 
+def _fallback_causal_summary(row: Any, detail: Dict[str, Any]) -> str:
+    chain = detail.get("evidence_chain") if isinstance(detail.get("evidence_chain"), list) else []
+    lead = chain[0] if chain else {}
+    source = lead.get("source") if isinstance(lead, dict) else ""
+    if source:
+        return (
+            f"历史卡已保留{source}等来源统计，但未保存逐条新闻标题；"
+            f"当前仅能说明该信号由真实来源统计与行情指标共同触发，重跑管线后展示完整驱动链。"
+        )
+    return f"历史卡尚未生成逐条证据归因；重跑管线后会按真实来源补齐「为什么动」。"
+
+
+def _card_causal_summary(row: Any, detail: Dict[str, Any]) -> Dict[str, Any]:
+    """今日卡片上展示的轻量归因摘要；完整证据在抽屉里展开。"""
+    basis = detail.get("evidence_basis") if isinstance(detail.get("evidence_basis"), list) else []
+    chain = detail.get("evidence_chain") if isinstance(detail.get("evidence_chain"), list) else []
+    lead = basis[0] if basis else {}
+    legacy_lead = chain[0] if chain else {}
+    return {
+        "summary": detail.get("causal_summary") or _fallback_causal_summary(row, detail),
+        "confidence": detail.get("confidence") or "证据不足",
+        "evidence_count": len(basis) or sum(int(item.get("count") or 0) for item in chain if isinstance(item, dict)),
+        "lead_source": lead.get("source") or legacy_lead.get("source") or "",
+        "lead_title": lead.get("title") or "",
+    }
+
+
 def get_today_briefing() -> Dict[str, Any]:
     """返回最近一个有预判数据的交易日的完整简报。"""
     if not db.available():
@@ -98,6 +125,7 @@ def get_today_briefing() -> Dict[str, Any]:
         tags = row.tags if isinstance(row.tags, list) else []
         boards = row.boards if isinstance(row.boards, list) else []
         stock_candidates = row.stock_candidates if isinstance(row.stock_candidates, list) else []
+        detail = row.detail if isinstance(row.detail, dict) else {}
         board_names.extend(b.get("name", "") for b in boards)
         cards.append({
             "id": row.card_id,
@@ -116,6 +144,7 @@ def get_today_briefing() -> Dict[str, Any]:
             "board_name": boards[0].get("name") if boards else "",
             "board_trend": _board_trend(boards[0].get("code")) if boards else [],
             "stock_candidates": stock_candidates,
+            "causal": _card_causal_summary(row, detail),
         })
 
     headline = rows[0].headline if rows else ""
@@ -174,6 +203,29 @@ def get_prediction_detail(card_id: str) -> Dict[str, Any]:
         return {"success": False, "message": "未找到对应预判解析"}
     detail = row.detail if isinstance(row.detail, dict) else {}
     stock_candidates = row.stock_candidates if isinstance(row.stock_candidates, list) else []
+    causal_summary = detail.get("causal_summary") or _fallback_causal_summary(row, detail)
+    legacy_chain = detail.get("evidence_chain") if isinstance(detail.get("evidence_chain"), list) else []
+    evidence_basis = detail.get("evidence_basis")
+    if not isinstance(evidence_basis, list) or not evidence_basis:
+        evidence_basis = [
+            {
+                "source": item.get("source", ""),
+                "title": f"历史来源统计：{item.get('source', '')} {item.get('count', 0)}条",
+                "url": "",
+                "type": "来源统计",
+                "credibility": item.get("credibility", "中"),
+                "note": item.get("note", "历史数据未保存逐条新闻标题，需重跑管线生成完整来源。"),
+            }
+            for item in legacy_chain
+            if isinstance(item, dict)
+        ]
+    causal_chain = detail.get("causal_chain")
+    if not isinstance(causal_chain, list) or not causal_chain:
+        causal_chain = [
+            {"step": "来源统计", "text": "旧版管线已保存来源数量与可信度统计，但未保存逐条新闻标题。"},
+            {"step": "行情验证", "text": f"该卡当时记录热度z={row.heat_z}、价格z={row.price_z}，用于识别舆情-价格关系。"},
+            {"step": "补齐方式", "text": "重新运行雷达管线后，会按真实新闻/政策标题生成完整事件驱动链和反证提醒。"},
+        ]
     return {
         "success": True,
         "id": card_id,
@@ -183,6 +235,11 @@ def get_prediction_detail(card_id: str) -> Dict[str, Any]:
             "title": row.title,
             "scenario": row.scenario,
             "summary": detail.get("summary", row.judgement),
+            "causal_summary": causal_summary,
+            "confidence": detail.get("confidence", "证据不足"),
+            "causal_chain": causal_chain,
+            "evidence_basis": evidence_basis,
+            "counter_evidence": detail.get("counter_evidence", []),
             "why": detail.get("why", []),
             "timeline": detail.get("timeline", []),
             "evidence_chain": detail.get("evidence_chain", []),

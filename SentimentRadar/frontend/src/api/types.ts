@@ -66,6 +66,15 @@ export interface PredictionCard {
   board_name?: string
   board_trend?: number[]
   stock_candidates?: StockCandidate[]
+  causal?: PredictionCausalSummary
+}
+
+export interface PredictionCausalSummary {
+  summary: string
+  confidence: string
+  evidence_count: number
+  lead_source?: string
+  lead_title?: string
 }
 
 export interface StockCandidate {
@@ -205,6 +214,11 @@ export interface PredictionDetail extends ApiResult {
     title: string
     scenario: string
     summary: string
+    causal_summary?: string
+    confidence?: string
+    causal_chain?: CausalChainItem[]
+    evidence_basis?: EvidenceBasisItem[]
+    counter_evidence?: string[]
     why: string[]
     timeline: { time: string; label: string; text: string }[]
     evidence_chain: { source: string; count: number; credibility: string; note: string }[]
@@ -212,6 +226,20 @@ export interface PredictionDetail extends ApiResult {
     next_watch: string[]
     stock_candidates?: StockCandidate[]
   }
+}
+
+export interface CausalChainItem {
+  step: string
+  text: string
+}
+
+export interface EvidenceBasisItem {
+  source: string
+  title: string
+  url?: string
+  type: string
+  credibility: string
+  note: string
 }
 
 export interface FocusHit {
